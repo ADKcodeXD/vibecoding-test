@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Material 3 Audio Visualizer</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap">
+    <style>
+        :root {
+            /* Material 3 Dark Theme Tokens */
+            --md-sys-color-surface: #141218;
+            --md-sys-color-surface-container: #1d1b20;
+            --md-sys-color-primary: #d0bcff;
+            --md-sys-color-on-primary: #381e72;
+            --md-sys-color-secondary-container: #4a4458;
+            --md-sys-color-on-surface: #e6e1e5;
+            --md-sys-color-outline: #938f99;
+            --md-sys-elevation-2: 0px 3px 1px -2px rgba(0, 0, 0, 0.2), 0px 2px 2px 0px rgba(0, 0, 0, 0.14), 0px 1px 5px 0px rgba(0, 0, 0, 0.12);
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #111;
+            font-family: 'Roboto', sans-serif;
+            color: var(--md-sys-color-on-surface);
+        }
+
+        canvas {
+            display: block;
+        }
+
+        /* 主 UI 容器 (居中) */
+        #center-ui {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            z-index: 10;
+            transition: opacity 0.3s;
+            pointer-events: auto;
+        }
+
+        h1 {
+            font-weight: 400;
+            font-size: 3rem;
+            letter-spacing: 0px;
+            margin-bottom: 40px;
+            color: #ffffff;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.8);
+        }
+
+        /* Material 3 Filled Button */
+        .m3-btn {
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            border: none;
+            padding: 0 24px;
+            height: 40px;
+            border-radius: 20px;
+            font-family: 'Roboto', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            letter-spacing: 0.1px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: var(--md-sys-elevation-2);
+        }
+
+        .m3-btn:hover {
+            background-color: #e8def8; /* Lighter primary */
+            box-shadow: 0px 2px 4px -1px rgba(0, 0, 0, 0.2), 0px 4px 5px 0px rgba(0, 0, 0, 0.14), 0px 1px 10px 0px rgba(0, 0, 0, 0.12);
+        }
+
+        .file-input-wrapper {
+            position: relative;
+            overflow: hidden;
+            display: inline-block;
+        }
+
+        .file-input-wrapper input[type=file] {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        /* 右上角图标按钮容器 */
+        .icon-btn-group {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 12px;
+            z-index: 20;
+            display: none; /* 初始隐藏 */
+        }
+
+        /* 图标按钮通用样式 */
+        .icon-btn {
+            width: 48px;
+            height: 48px;
+            border-radius: 24px;
+            background-color: rgba(30, 30, 30, 0.6);
+            backdrop-filter: blur(8px);
+            color: var(--md-sys-color-on-surface);
+            border: 1px solid rgba(255,255,255,0.1);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            box-shadow: var(--md-sys-elevation-2);
+            transition: all 0.2s;
+        }
+        
+        .icon-btn:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+
+        .icon-btn.active {
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+        }
+
+        /* 通用面板样式 */
+        .side-panel {
+            position: absolute;
+            top: 80px;
+            right: 20px;
+            width: 320px;
+            background-color: rgba(20, 20, 25, 0.85);
+            backdrop-filter: blur(16px);
+            border-radius: 16px;
+            padding: 24px;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            
+            /* 动画状态 */
+            opacity: 0;
+            pointer-events: none;
+            transform: translateX(50px) scale(0.95);
+            transition: all 0.4s cubic-bezier(0.2, 0, 0, 1);
+            transform-origin: top right;
+        }
+
+        .side-panel.visible {
+            opacity: 1;
+            pointer-events: auto;
+            transform: translateX(0) scale(1);
+        }
+
+        .panel-title {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #fff;
+            margin: 0 0 5px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* M3 Sliders */
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.7);
+        }
+
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+            cursor: pointer;
+        }
+
+        input[type=range]:focus {
+            outline: none;
+        }
+
+        /* Slider Track */
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 2px;
+        }
+
+        /* Slider Thumb */
+        input[type=range]::-webkit-slider-thumb {
+            height: 20px;
+            width: 20px;
+            border-radius: 50%;
+            background: var(--md-sys-color-primary);
+            -webkit-appearance: none;
+            margin-top: -8px;
+            transition: transform 0.1s;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        input[type=range]:active::-webkit-slider-thumb {
+            transform: scale(1.2);
+        }
+
+        /* Color Pickers Row */
+        .color-row {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 5px;
+            gap: 8px;
+        }
+
+        .color-input-wrapper {
+            flex: 1;
+            height: 36px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.3);
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        
+        .color-input-wrapper:hover {
+            transform: translateY(-2px);
+            border-color: #fff;
+            box-shadow: 0 0 10px rgba(255,255,255,0.2);
+        }
+
+        input[type=color] {
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            padding: 0;
+            margin: 0;
+            border: none;
+            cursor: pointer;
+        }
+
+        /* 底部播放控制栏 */
+        #playback-bar {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            background-color: rgba(20, 20, 25, 0.8);
+            backdrop-filter: blur(12px);
+            border-radius: 30px;
+            padding: 10px 24px;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 20;
+            opacity: 0; /* 初始隐藏 */
+            pointer-events: none;
+            transition: opacity 0.5s;
+        }
+
+        #play-pause-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 20px;
+            background-color: var(--md-sys-color-primary);
+            color: var(--md-sys-color-on-primary);
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            flex-shrink: 0;
+            transition: transform 0.1s;
+        }
+
+        #play-pause-btn:active {
+            transform: scale(0.95);
+        }
+
+        #progress-container {
+            flex: 1;
+            height: 6px;
+            background-color: rgba(255,255,255,0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #progress-fill {
+            position: absolute;
+            top: 0;
+            left: 0;
+            height: 100%;
+            width: 0%;
+            background-color: var(--md-sys-color-primary);
+            border-radius: 3px;
+            transition: width 0.1s linear;
+        }
+
+        #time-display {
+            font-size: 12px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.8);
+            min-width: 80px;
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .loader {
+            border: 3px solid rgba(255,255,255,0.2);
+            border-top: 3px solid var(--md-sys-color-primary);
+            border-radius: 50%;
+            width: 48px;
+            height: 48px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+            display: none;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        #info-text {
+            position: absolute;
+            bottom: 80px; 
+            left: 20px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.4);
+            pointer-events: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- 初始中心 UI -->
+    <div id="center-ui">
+        <h1>Luminous Field</h1>
+        <div class="file-input-wrapper">
+            <button class="m3-btn">
+                <span style="margin-right: 8px;">♪</span> Select Audio File
+            </button>
+            <input type="file" id="file-input" accept="audio/*" />
+        </div>
+        <div class="loader" id="loader"></div>
+    </div>
+
+    <!-- 右上角按钮组 -->
+    <div class="icon-btn-group" id="top-controls">
+        <button class="icon-btn" id="toggle-lights-btn" title="Lighting Settings">💡</button>
+        <button class="icon-btn" id="toggle-settings-btn" title="Visual Settings">⚙</button>
+    </div>
+
+    <!-- 1. 视觉设置面板 (Visuals) -->
+    <div id="controls-panel" class="side-panel">
+        <h2 class="panel-title">Visual Settings</h2>
+        
+        <div class="control-group">
+            <div class="label-row">
+                <span>Height Scale</span>
+                <span id="val-height">1.0x</span>
+            </div>
+            <input type="range" id="input-height" min="10" max="50" value="25">
+        </div>
+
+        <div class="control-group">
+            <div class="label-row">
+                <span>Damping (Smoothness)</span>
+                <span id="val-damping">Medium</span>
+            </div>
+            <input type="range" id="input-damping" min="0.01" max="0.3" step="0.01" value="0.05">
+        </div>
+
+        <div class="control-group">
+            <div class="label-row">
+                <span>Bloom Strength</span>
+                <span id="val-bloom">1.5</span>
+            </div>
+            <input type="range" id="input-bloom" min="0" max="3" step="0.1" value="1.5">
+        </div>
+
+        <div class="control-group">
+            <div class="label-row">
+                <span>DoF Intensity</span>
+                <span id="val-dof">Medium</span>
+            </div>
+            <input type="range" id="input-dof" min="0.0001" max="0.002" step="0.0001" value="0.0003">
+        </div>
+
+        <div class="control-group">
+            <div class="label-row">
+                <span>Reflectivity</span>
+                <span id="val-reflect">High</span>
+            </div>
+            <input type="range" id="input-reflect" min="0" max="1" step="0.1" value="0.9">
+        </div>
+
+        <div class="control-group" style="margin-top: 10px;">
+            <div class="label-row">
+                <span>Gradient Palette</span>
+            </div>
+            <div class="color-row">
+                <div class="color-input-wrapper"><input type="color" id="col-1" value="#0066ff"></div>
+                <div class="color-input-wrapper"><input type="color" id="col-2" value="#00aaff"></div>
+                <div class="color-input-wrapper"><input type="color" id="col-3" value="#00ffff"></div>
+                <div class="color-input-wrapper"><input type="color" id="col-4" value="#ff00ff"></div>
+                <div class="color-input-wrapper"><input type="color" id="col-5" value="#ffffff"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. 灯光设置面板 (Lights) -->
+    <div id="lights-panel" class="side-panel">
+        <h2 class="panel-title">Lighting Setup</h2>
+        
+        <div class="control-group">
+            <div class="label-row">
+                <span>Background Brightness</span>
+                <span id="val-light-bg">1.2</span>
+            </div>
+            <input type="range" id="input-light-bg" min="0" max="2" step="0.1" value="1.2">
+        </div>
+
+        <div class="control-group">
+            <div class="label-row">
+                <span>Ambient Intensity</span>
+                <span id="val-light-ambient">2.0</span>
+            </div>
+            <input type="range" id="input-light-ambient" min="0" max="4" step="0.1" value="2.0">
+        </div>
+
+        <div class="control-group">
+            <div class="label-row">
+                <span>Main Source Intensity</span>
+                <span id="val-light-spot">3000</span>
+            </div>
+            <input type="range" id="input-light-spot" min="0" max="8000" step="100" value="3000">
+        </div>
+
+        <div class="control-group">
+            <div class="label-row">
+                <span>Top Light Intensity</span>
+                <span id="val-light-top">3.0</span>
+            </div>
+            <input type="range" id="input-light-top" min="0" max="8" step="0.1" value="3.0">
+        </div>
+    </div>
+
+    <!-- 底部播放控制栏 -->
+    <div id="playback-bar">
+        <button id="play-pause-btn" title="Play/Pause">⏸</button>
+        <div id="progress-container">
+            <div id="progress-fill"></div>
+        </div>
+        <div id="time-display">0:00 / 0:00</div>
+    </div>
+
+    <div id="info-text">LMB: Rotate &nbsp; RMB: Pan &nbsp; Scroll: Zoom</div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+        import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+        import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+        import { BokehPass } from 'three/addons/postprocessing/BokehPass.js';
+        import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+
+        // --- 配置参数 ---
+        const params = {
+            maxHeight: 25,
+            dampingFall: 0.05,
+            dampingRise: 0.25,
+            bloomStrength: 1.5,
+            reflectivity: 0.9,
+            bokehAperture: 0.0003,
+            colors: [
+                new THREE.Color(0x101030), 
+                new THREE.Color(0x0066ff), 
+                new THREE.Color(0x00aaff), 
+                new THREE.Color(0x00ffff), 
+                new THREE.Color(0xff00ff), 
+                new THREE.Color(0xffffff)  
+            ]
+        };
+
+        const GRID_SIZE = 60; 
+        const TOTAL_CUBES = GRID_SIZE * GRID_SIZE;
+        const CUBE_SIZE = 0.8;
+        const GAP = 0.15; 
+        
+        // Global vars
+        let scene, camera, renderer, controls, composer, bloomPass, bokehPass;
+        let mesh, starSystem, sourceMesh; // sourceMesh 用于显示光源位置
+        let audioCtx, analyser, dataArray, source;
+        let isPlaying = false;
+        
+        // Light Objects
+        let topLight, ambientLight, spotLight;
+
+        // UI State
+        let activePanel = null; 
+        
+        // Audio Timing
+        let audioStartTime = 0;
+        let audioDuration = 0;
+        
+        const currentHeights = new Float32Array(TOTAL_CUBES).fill(0.1);
+        const audioTargetHeights = new Float32Array(TOTAL_CUBES).fill(0.1);
+        const dummy = new THREE.Object3D();
+        let averageFrequency = 0;
+
+        // Background Colors - Brighter tones
+        const BG_COLORS = [
+            new THREE.Color('#0a0a2a'), // Top
+            new THREE.Color('#2a2a5a'), // Mid
+            new THREE.Color('#3a3a7a')  // Bottom
+        ];
+
+        init();
+        initUI();
+        animate();
+
+        function init() {
+            scene = new THREE.Scene();
+            createGradientBackground(1.2); // Initial brightness
+            scene.fog = new THREE.FogExp2(0x1a1a3a, 0.01); // Lighter fog
+
+            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 500);
+            camera.position.set(0, 45, 65); 
+            camera.lookAt(0, 0, 0); 
+
+            renderer = new THREE.WebGLRenderer({ antialias: false }); 
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            // High Tone Mapping for brightness
+            renderer.toneMapping = THREE.ReinhardToneMapping;
+            renderer.toneMappingExposure = 3.0; // Increased exposure
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            document.body.appendChild(renderer.domElement);
+
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.5;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05;
+            controls.minDistance = 10;
+            controls.maxDistance = 200;
+
+            const renderPass = new RenderPass(scene, camera);
+            bloomPass = new UnrealBloomPass(
+                new THREE.Vector2(window.innerWidth, window.innerHeight),
+                params.bloomStrength, 0.4, 0.6
+            );
+            bokehPass = new BokehPass(scene, camera, {
+                focus: 65.0, aperture: params.bokehAperture, maxblur: 0.015,
+                width: window.innerWidth, height: window.innerHeight
+            });
+            const outputPass = new OutputPass();
+
+            composer = new EffectComposer(renderer);
+            composer.addPass(renderPass);
+            composer.addPass(bloomPass); 
+            composer.addPass(bokehPass); 
+            composer.addPass(outputPass);
+
+            // --- Lighting System ---
+            
+            // 1. Ambient Light (Base brightness)
+            ambientLight = new THREE.HemisphereLight(0x6666aa, 0x111122, 2.0);
+            scene.add(ambientLight);
+
+            // 2. Top Light (Soft fill from above)
+            topLight = new THREE.PointLight(0xccccff, 3.0, 100);
+            topLight.position.set(0, 40, 0);
+            scene.add(topLight);
+
+            // 3. Main Spot Light (The "Sun")
+            spotLight = new THREE.SpotLight(0xffaaee, 3000);
+            spotLight.position.set(60, 80, 60); // High angle
+            spotLight.angle = Math.PI / 5;
+            spotLight.penumbra = 0.5;
+            spotLight.castShadow = true;
+            spotLight.shadow.mapSize.set(2048, 2048);
+            spotLight.shadow.bias = -0.0001;
+            scene.add(spotLight);
+
+            // 4. Light Source Visualization (The Glowing Orb)
+            const sphereGeo = new THREE.SphereGeometry(4, 32, 32);
+            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+            sourceMesh = new THREE.Mesh(sphereGeo, sphereMat);
+            sourceMesh.position.copy(spotLight.position);
+            scene.add(sourceMesh);
+
+            // 5. Lens Flare Sprite (Visual effect for the source)
+            // Create a simple glow texture programmatically
+            const canvas = document.createElement('canvas');
+            canvas.width = 64; canvas.height = 64;
+            const ctx = canvas.getContext('2d');
+            const grad = ctx.createRadialGradient(32,32,0,32,32,32);
+            grad.addColorStop(0, 'rgba(255,255,255,1)');
+            grad.addColorStop(0.4, 'rgba(255,200,255,0.5)');
+            grad.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = grad; ctx.fillRect(0,0,64,64);
+            const spriteMap = new THREE.CanvasTexture(canvas);
+            const spriteMat = new THREE.SpriteMaterial({ map: spriteMap, color: 0xffffff, transparent: true, blending: THREE.AdditiveBlending });
+            const sprite = new THREE.Sprite(spriteMat);
+            sprite.scale.set(40, 40, 1);
+            sourceMesh.add(sprite); // Attach glow to the source mesh
+
+            // --- Floor Mesh ---
+            const geometry = new THREE.BoxGeometry(CUBE_SIZE, 1, CUBE_SIZE);
+            geometry.translate(0, 0.5, 0); 
+
+            const material = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff, roughness: 0.15, metalness: 0.3, 
+                reflectivity: params.reflectivity, 
+                clearcoat: 1.0, clearcoatRoughness: 0.1,
+                emissive: 0x000000, 
+            });
+
+            mesh = new THREE.InstancedMesh(geometry, material, TOTAL_CUBES);
+            mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+            mesh.receiveShadow = true;
+            mesh.castShadow = true;
+            scene.add(mesh);
+
+            initMeshPositions();
+            createStarField();
+
+            window.addEventListener('resize', onWindowResize);
+            document.getElementById('file-input').addEventListener('change', handleFileUpload);
+            
+            document.getElementById('toggle-settings-btn').addEventListener('click', () => togglePanel('visuals'));
+            document.getElementById('toggle-lights-btn').addEventListener('click', () => togglePanel('lights'));
+            document.getElementById('play-pause-btn').addEventListener('click', togglePlayPause);
+        }
+
+        function togglePanel(panelName) {
+            const settingsBtn = document.getElementById('toggle-settings-btn');
+            const lightsBtn = document.getElementById('toggle-lights-btn');
+            const settingsPanel = document.getElementById('controls-panel');
+            const lightsPanel = document.getElementById('lights-panel');
+
+            if (activePanel === panelName) {
+                activePanel = null;
+                settingsPanel.classList.remove('visible');
+                lightsPanel.classList.remove('visible');
+                settingsBtn.classList.remove('active');
+                lightsBtn.classList.remove('active');
+            } else {
+                settingsPanel.classList.remove('visible');
+                lightsPanel.classList.remove('visible');
+                settingsBtn.classList.remove('active');
+                lightsBtn.classList.remove('active');
+                
+                activePanel = panelName;
+                if (panelName === 'visuals') {
+                    settingsPanel.classList.add('visible');
+                    settingsBtn.classList.add('active');
+                } else {
+                    lightsPanel.classList.add('visible');
+                    lightsBtn.classList.add('active');
+                }
+            }
+        }
+
+        function togglePlayPause() {
+            if (!audioCtx) return;
+            const btn = document.getElementById('play-pause-btn');
+            if (audioCtx.state === 'running') {
+                audioCtx.suspend().then(() => { isPlaying = false; btn.innerText = '▶'; });
+            } else if (audioCtx.state === 'suspended') {
+                audioCtx.resume().then(() => { isPlaying = true; btn.innerText = '⏸'; });
+            }
+        }
+
+        function initUI() {
+            // Visuals
+            document.getElementById('input-height').addEventListener('input', (e) => {
+                params.maxHeight = parseFloat(e.target.value);
+                document.getElementById('val-height').innerText = (params.maxHeight / 25).toFixed(1) + 'x';
+            });
+            document.getElementById('input-damping').addEventListener('input', (e) => {
+                params.dampingFall = parseFloat(e.target.value);
+                let text = "Medium";
+                if (params.dampingFall < 0.03) text = "Silky"; else if (params.dampingFall > 0.2) text = "Sharp";
+                document.getElementById('val-damping').innerText = text;
+            });
+            document.getElementById('input-bloom').addEventListener('input', (e) => {
+                params.bloomStrength = parseFloat(e.target.value);
+                bloomPass.strength = params.bloomStrength;
+                document.getElementById('val-bloom').innerText = params.bloomStrength.toFixed(1);
+            });
+            document.getElementById('input-dof').addEventListener('input', (e) => {
+                params.bokehAperture = parseFloat(e.target.value);
+                bokehPass.uniforms['aperture'].value = params.bokehAperture;
+                let text = "Medium"; if (params.bokehAperture < 0.0002) text = "Low"; else if (params.bokehAperture > 0.001) text = "High";
+                document.getElementById('val-dof').innerText = text;
+            });
+            document.getElementById('input-reflect').addEventListener('input', (e) => {
+                params.reflectivity = parseFloat(e.target.value);
+                mesh.material.reflectivity = params.reflectivity;
+                mesh.material.needsUpdate = true;
+                document.getElementById('val-reflect').innerText = (params.reflectivity * 100).toFixed(0) + '%';
+            });
+
+            // Colors
+            const updateColor = (index, hex) => params.colors[index].set(hex);
+            for(let i=1; i<=5; i++) {
+                document.getElementById(`col-${i}`).addEventListener('input', (e) => updateColor(i, e.target.value));
+            }
+
+            // Lighting
+            document.getElementById('input-light-bg').addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                createGradientBackground(val);
+                document.getElementById('val-light-bg').innerText = val.toFixed(1);
+            });
+            document.getElementById('input-light-ambient').addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                ambientLight.intensity = val;
+                document.getElementById('val-light-ambient').innerText = val.toFixed(1);
+            });
+            document.getElementById('input-light-spot').addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                spotLight.intensity = val;
+                document.getElementById('val-light-spot').innerText = val.toFixed(0);
+            });
+            document.getElementById('input-light-top').addEventListener('input', (e) => {
+                const val = parseFloat(e.target.value);
+                topLight.intensity = val;
+                document.getElementById('val-light-top').innerText = val.toFixed(1);
+            });
+        }
+
+        function initMeshPositions() {
+            const offset = (GRID_SIZE * (CUBE_SIZE + GAP)) / 2;
+            let i = 0;
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let z = 0; z < GRID_SIZE; z++) {
+                    dummy.position.set(x * (CUBE_SIZE + GAP) - offset, 0, z * (CUBE_SIZE + GAP) - offset);
+                    dummy.scale.set(1, 0.1, 1);
+                    dummy.updateMatrix();
+                    mesh.setMatrixAt(i, dummy.matrix);
+                    mesh.setColorAt(i, params.colors[0]);
+                    i++;
+                }
+            }
+            mesh.instanceMatrix.needsUpdate = true;
+            mesh.instanceColor.needsUpdate = true;
+        }
+
+        function createGradientBackground(brightness = 1.0) {
+            const canvas = document.createElement('canvas');
+            canvas.width = 2;
+            canvas.height = 512;
+            const ctx = canvas.getContext('2d');
+            const gradient = ctx.createLinearGradient(0, 0, 0, 512);
+            
+            const c0 = BG_COLORS[0].clone().multiplyScalar(brightness).getStyle();
+            const c1 = BG_COLORS[1].clone().multiplyScalar(brightness).getStyle();
+            const c2 = BG_COLORS[2].clone().multiplyScalar(brightness).getStyle();
+
+            gradient.addColorStop(0, c0); 
+            gradient.addColorStop(0.5, c1); 
+            gradient.addColorStop(1, c2); 
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 2, 512);
+            
+            if (scene.background) scene.background.dispose();
+            scene.background = new THREE.CanvasTexture(canvas);
+            scene.background.colorSpace = THREE.SRGBColorSpace;
+        }
+
+        function createStarField() {
+            const geo = new THREE.BufferGeometry();
+            const count = 3500;
+            const pos = new Float32Array(count * 3);
+            for(let i=0; i<count*3; i+=3) {
+                pos[i] = (Math.random()-0.5)*250;
+                pos[i+1] = Math.random()*120 + 20;
+                pos[i+2] = (Math.random()-0.5)*250;
+            }
+            geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+            const mat = new THREE.PointsMaterial({
+                size: 0.5, color: 0xffffff, transparent: true, 
+                opacity: 0.8, blending: THREE.AdditiveBlending
+            });
+            starSystem = new THREE.Points(geo, mat);
+            scene.add(starSystem);
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            document.querySelector('.m3-btn').style.display = 'none';
+            document.getElementById('loader').style.display = 'block';
+            const reader = new FileReader();
+            reader.onload = function(e) { initAudio(e.target.result); };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function initAudio(arrayBuffer) {
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (source) source.stop();
+
+            audioCtx.decodeAudioData(arrayBuffer, (buffer) => {
+                document.getElementById('center-ui').style.opacity = 0;
+                document.getElementById('center-ui').style.pointerEvents = 'none';
+                document.getElementById('top-controls').style.display = 'flex';
+                const playbackBar = document.getElementById('playback-bar');
+                playbackBar.style.opacity = 1;
+                playbackBar.style.pointerEvents = 'auto';
+
+                source = audioCtx.createBufferSource();
+                source.buffer = buffer;
+                audioDuration = buffer.duration;
+                
+                analyser = audioCtx.createAnalyser();
+                analyser.fftSize = 2048;
+                analyser.smoothingTimeConstant = 0.8; 
+                dataArray = new Uint8Array(analyser.frequencyBinCount);
+
+                source.connect(analyser);
+                analyser.connect(audioCtx.destination);
+
+                source.start(0);
+                audioStartTime = audioCtx.currentTime;
+                isPlaying = true;
+                
+                source.onended = () => {
+                    isPlaying = false;
+                    document.getElementById('center-ui').style.opacity = 1;
+                    document.getElementById('center-ui').style.pointerEvents = 'auto';
+                    document.querySelector('.m3-btn').style.display = 'inline-flex';
+                    document.getElementById('loader').style.display = 'none';
+                    togglePanel(null); 
+                    document.getElementById('top-controls').style.display = 'none';
+                    document.getElementById('playback-bar').style.opacity = 0;
+                    document.getElementById('playback-bar').style.pointerEvents = 'none';
+                    currentHeights.fill(0.1);
+                    audioTargetHeights.fill(0.1);
+                    averageFrequency = 0;
+                    updateGridVisuals();
+                };
+            }, (e) => {
+                alert("Load failed");
+                document.getElementById('loader').style.display = 'none';
+                document.querySelector('.m3-btn').style.display = 'inline-flex';
+            });
+        }
+
+        function getInterpolatedColor(t) {
+            if (t < 0.02) return params.colors[0];
+            const color = new THREE.Color();
+            if (t < 0.2) return color.copy(params.colors[0]).lerp(params.colors[1], t / 0.2);
+            else if (t < 0.4) return color.copy(params.colors[1]).lerp(params.colors[2], (t - 0.2) / 0.2);
+            else if (t < 0.6) return color.copy(params.colors[2]).lerp(params.colors[3], (t - 0.4) / 0.2);
+            else if (t < 0.8) return color.copy(params.colors[3]).lerp(params.colors[4], (t - 0.6) / 0.2);
+            else return color.copy(params.colors[4]).lerp(params.colors[5], (t - 0.8) / 0.2);
+        }
+
+        function formatTime(seconds) {
+            const m = Math.floor(seconds / 60);
+            const s = Math.floor(seconds % 60);
+            return `${m}:${s.toString().padStart(2, '0')}`;
+        }
+
+        function updatePlaybackInfo() {
+            if (!audioCtx || !isPlaying || !audioDuration) return;
+            const elapsed = Math.min(audioCtx.currentTime - audioStartTime, audioDuration);
+            const progress = (elapsed / audioDuration) * 100;
+            document.getElementById('progress-fill').style.width = `${progress}%`;
+            document.getElementById('time-display').innerText = `${formatTime(elapsed)} / ${formatTime(audioDuration)}`;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            controls.update(); 
+
+            if (isPlaying && analyser) {
+                updatePlaybackInfo();
+                analyser.getByteFrequencyData(dataArray);
+                let sum = 0;
+                const range = dataArray.length / 2; 
+                for(let j = 0; j < range; j++) sum += dataArray[j];
+                averageFrequency = THREE.MathUtils.lerp(averageFrequency, sum / range, 0.1);
+                updateGridVisuals();
+                if (starSystem) {
+                    starSystem.material.opacity = 0.4 + (averageFrequency / 255) * 0.6;
+                    starSystem.rotation.y += 0.0002;
+                }
+            }
+
+            const dist = camera.position.distanceTo(new THREE.Vector3(0,0,0));
+            if (bokehPass && bokehPass.uniforms) bokehPass.uniforms['focus'].value = dist;
+
+            composer.render();
+        }
+
+        function updateGridVisuals() {
+            const offset = (GRID_SIZE * (CUBE_SIZE + GAP)) / 2;
+            const center = GRID_SIZE / 2;
+
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let z = 0; z < GRID_SIZE; z++) {
+                    const index = x * GRID_SIZE + z;
+                    const dist = Math.sqrt((x - center)**2 + (z - center)**2);
+                    const normalizedDist = Math.min(dist / (center * 1.4), 1.0);
+                    const freqIndex = Math.floor(normalizedDist * (dataArray.length / 2.5)); 
+                    const value = dataArray[freqIndex] || 0;
+                    const trebleBoost = 1.0 + normalizedDist * 1.5;
+                    const strength = Math.min(Math.max(0, (value * trebleBoost) - 30) / 225, 1.5);
+                    audioTargetHeights[index] = 0.1 + strength * params.maxHeight;
+                }
+            }
+
+            let i = 0;
+            for (let x = 0; x < GRID_SIZE; x++) {
+                for (let z = 0; z < GRID_SIZE; z++) {
+                    let neighborSum = 0, count = 0;
+                    if (x > 0) { neighborSum += currentHeights[i - GRID_SIZE]; count++; }
+                    if (x < GRID_SIZE - 1) { neighborSum += currentHeights[i + GRID_SIZE]; count++; }
+                    if (z > 0) { neighborSum += currentHeights[i - 1]; count++; }
+                    if (z < GRID_SIZE - 1) { neighborSum += currentHeights[i + 1]; count++; }
+                    
+                    let mixedTarget = audioTargetHeights[i] * 0.6 + (count ? neighborSum / count : 0.1) * 0.4;
+                    const damping = mixedTarget > currentHeights[i] ? params.dampingRise : params.dampingFall;
+                    currentHeights[i] = THREE.MathUtils.lerp(currentHeights[i], mixedTarget, damping);
+                    
+                    dummy.position.set(x * (CUBE_SIZE + GAP) - offset, 0, z * (CUBE_SIZE + GAP) - offset);
+                    dummy.scale.set(1, currentHeights[i], 1);
+                    dummy.updateMatrix();
+                    mesh.setMatrixAt(i, dummy.matrix);
+
+                    mesh.setColorAt(i, getInterpolatedColor((currentHeights[i] - 0.1) / (params.maxHeight * 0.8)));
+                    i++;
+                }
+            }
+            mesh.instanceMatrix.needsUpdate = true;
+            mesh.instanceColor.needsUpdate = true;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            composer.setSize(window.innerWidth, window.innerHeight);
+        }
+    </script>
+</body>
+</html>

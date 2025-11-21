@@ -11,7 +11,7 @@
     owner: '',
     repo: '',
     branch: 'main',
-    path: ''
+    path: 'web'
   };
 
   const icons = {
@@ -37,6 +37,7 @@
         state.owner = saved.owner || '';
         state.repo = saved.repo || '';
         state.branch = saved.branch || 'main';
+        state.path = 'web';
         return;
       } catch (_) {
         // ignore corrupted storage
@@ -46,6 +47,7 @@
     state.owner = guessed.owner;
     state.repo = guessed.repo;
     state.branch = 'main';
+    state.path = 'web';
   }
 
   function persistConfig() {
@@ -67,39 +69,7 @@
   }
 
   function buildBreadcrumbs() {
-    const parts = state.path ? state.path.split('/').filter(Boolean) : [];
-    const frag = document.createDocumentFragment();
-
-    const rootLink = document.createElement('a');
-    rootLink.href = '#';
-    rootLink.textContent = state.repo || 'root';
-    rootLink.addEventListener('click', (e) => {
-      e.preventDefault();
-      if (state.path !== '') {
-        state.path = '';
-        loadListing();
-      }
-    });
-    frag.appendChild(rootLink);
-
-    let cumulative = '';
-    parts.forEach((part) => {
-      cumulative += `${part}/`;
-      const sep = document.createTextNode(' / ');
-      const link = document.createElement('a');
-      link.href = '#';
-      link.textContent = part;
-      link.addEventListener('click', (e) => {
-        e.preventDefault();
-        state.path = cumulative.slice(0, -1);
-        loadListing();
-      });
-      frag.appendChild(sep);
-      frag.appendChild(link);
-    });
-
-    breadcrumbsEl.innerHTML = '';
-    breadcrumbsEl.appendChild(frag);
+    breadcrumbsEl.textContent = `${state.repo || 'repo'}/web`;
   }
 
   function renderItems(items) {
@@ -118,28 +88,15 @@
 
       const link = document.createElement('a');
       link.className = 'item__name';
-      link.href = '#';
-      link.innerHTML = `${item.type === 'dir' ? icons.folder : icons.file}<span>${item.name}</span>`;
-
-      if (item.type === 'dir') {
-        link.addEventListener('click', (e) => {
-          e.preventDefault();
-          state.path = state.path ? `${state.path}/${item.name}` : item.name;
-          loadListing();
-        });
-      } else {
-        link.href = item.html_url;
-        link.target = '_blank';
-        link.rel = 'noopener noreferrer';
-      }
+      const liveUrl = new URL(`web/${item.name}`, window.location.href).toString();
+      link.href = liveUrl;
+      link.target = '_blank';
+      link.rel = 'noopener noreferrer';
+      link.innerHTML = `${icons.file}<span>${item.name}</span>`;
 
       const meta = document.createElement('div');
       meta.className = 'item__meta';
-      if (item.type === 'dir') {
-        meta.textContent = 'Directory · click to open';
-      } else {
-        meta.innerHTML = `<a href="${item.download_url}" target="_blank" rel="noopener noreferrer">Raw</a> · <a href="${item.html_url}" target="_blank" rel="noopener noreferrer">View on GitHub</a>`;
-      }
+      meta.innerHTML = `<a href="${item.download_url}" target="_blank" rel="noopener noreferrer">Raw</a> · <a href="${item.html_url}" target="_blank" rel="noopener noreferrer">GitHub</a>`;
 
       li.appendChild(link);
       li.appendChild(meta);
@@ -157,7 +114,7 @@
 
     buildBreadcrumbs();
     setStatus('Loading from GitHub…');
-    const path = state.path ? `/${state.path}` : '';
+    const path = '/web';
     const url = `https://api.github.com/repos/${encodeURIComponent(state.owner)}/${encodeURIComponent(state.repo)}/contents${path}?ref=${encodeURIComponent(state.branch)}`;
 
     try {
@@ -166,19 +123,14 @@
         throw new Error(`GitHub API error ${res.status}`);
       }
       const data = await res.json();
-      const sorted = data
-        .filter((item) => item.type === 'dir' || item.type === 'file')
-        .sort((a, b) => {
-          if (a.type !== b.type) {
-            return a.type === 'dir' ? -1 : 1;
-          }
-          return a.name.localeCompare(b.name);
-        });
-      renderItems(sorted);
-      setStatus(`Showing ${sorted.length} item(s) from ${state.owner}/${state.repo}@${state.branch}${state.path ? '/' + state.path : ''}`);
+      const htmlFiles = data
+        .filter((item) => item.type === 'file' && /\.html?$/i.test(item.name))
+        .sort((a, b) => a.name.localeCompare(b.name));
+      renderItems(htmlFiles);
+      setStatus(`Showing ${htmlFiles.length} page(s) from ${state.owner}/${state.repo}@${state.branch}/web`);
     } catch (err) {
       renderItems([]);
-      setStatus(`Failed to load: ${err.message}`);
+      setStatus(`Failed to load web/: ${err.message}`);
       console.error(err);
     }
   }
@@ -188,12 +140,13 @@
     state.owner = ownerInput.value.trim();
     state.repo = repoInput.value.trim();
     state.branch = branchInput.value.trim() || 'main';
-    state.path = '';
+    state.path = 'web';
     persistConfig();
     loadListing();
   });
 
   loadConfig();
   updateFormFields();
+  state.path = 'web';
   loadListing();
 })();
