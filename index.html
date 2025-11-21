@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibecoding Directory Index</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Vibecoding micro-launchpad</p>
+        <h1>Browse this repo via GitHub API</h1>
+        <p class="lede">
+          Auto-detected owner/repo when hosted on GitHub Pages. Update below if you want to point at a different repository or branch.
+        </p>
+      </div>
+      <form id="repo-form" class="config">
+        <label>
+          <span>Owner</span>
+          <input id="owner" name="owner" autocomplete="off" placeholder="github username/org" required>
+        </label>
+        <label>
+          <span>Repo</span>
+          <input id="repo" name="repo" autocomplete="off" placeholder="repository name" required>
+        </label>
+        <label>
+          <span>Branch</span>
+          <input id="branch" name="branch" autocomplete="off" placeholder="main" value="main">
+        </label>
+        <button type="submit">Save & Reload</button>
+      </form>
+    </header>
+
+    <section class="panel">
+      <div class="panel__header">
+        <div class="breadcrumbs" id="breadcrumbs"></div>
+        <div class="status" id="status">Loading repository info…</div>
+      </div>
+      <ul class="listing" id="listing"></ul>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
