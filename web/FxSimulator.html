@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>FX Pro Simulator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+JP:wght@400;700&display=swap');
+
+        :root {
+            --bg-dark: #0b1221;
+            --bg-panel: #161e2e;
+            --bull-green: #22c55e;
+            --bear-red: #ef4444;
+            --text-primary: #f3f4f6;
+            --line-cost: #3b82f6; 
+            --line-liq: #f97316;  
+        }
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            overflow: hidden;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .mono { font-family: 'JetBrains Mono', monospace; }
+
+        /* 输入框样式 */
+        .stealth-input {
+            background: #1f2937;
+            border: 1px solid #374151;
+            color: white;
+            padding: 0.25rem;
+            border-radius: 0.375rem;
+            text-align: center;
+            font-size: 0.875rem;
+        }
+        .stealth-input:focus {
+            outline: none;
+            border-color: #60a5fa;
+        }
+        
+        .price-input {
+            background: transparent;
+            border: none;
+            color: inherit;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 700;
+            width: 140px;
+            padding: 0;
+            margin: 0;
+            line-height: 1;
+        }
+        .price-input:focus { outline: none; background: rgba(255,255,255,0.05); border-radius: 4px; }
+        
+        input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+        /* 滑块样式 */
+        .price-slider {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: #374151;
+            border-radius: 3px;
+            outline: none;
+            cursor: pointer;
+        }
+        .price-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: #60a5fa;
+            cursor: pointer;
+            box-shadow: 0 0 10px rgba(96, 165, 250, 0.5);
+            margin-top: -9px;
+            transition: transform 0.1s;
+        }
+        .price-slider:active::-webkit-slider-thumb {
+            transform: scale(1.2);
+            background: #3b82f6;
+        }
+        .price-slider::-webkit-slider-runnable-track {
+            height: 6px;
+            border-radius: 3px;
+        }
+
+        .live-dot {
+            width: 6px;
+            height: 6px;
+            background-color: var(--bull-green);
+            border-radius: 50%;
+            box-shadow: 0 0 8px var(--bull-green);
+            animation: blink 2s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.4; }
+        }
+
+        select.dark-select {
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 0.2rem center;
+            background-repeat: no-repeat;
+            background-size: 1.2em 1.2em;
+            padding-right: 1.5rem;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+
+        .order-book-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            padding: 1px 4px;
+            font-family: 'JetBrains Mono', monospace;
+        }
+        .order-book-bar {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            opacity: 0.15;
+            z-index: 0;
+        }
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <!-- 顶部 -->
+    <header class="flex-none flex items-center justify-between px-4 py-3 bg-slate-900 border-b border-slate-800 z-20">
+        <div class="flex items-center gap-3">
+            <!-- 重置按钮 -->
+            <button id="btn-reset" class="text-slate-400 hover:text-white border border-slate-600 hover:border-slate-400 rounded px-2 py-1 text-xs transition flex items-center gap-1" title="リセット">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+                RESET
+            </button>
+
+            <div class="h-6 w-px bg-slate-700 mx-1"></div>
+
+            <!-- 货币对与价格 -->
+            <div class="bg-slate-800/80 px-3 py-1.5 rounded-lg border border-slate-700 flex items-center gap-3">
+                <div class="flex flex-col">
+                    <select id="symbol-select" class="dark-select bg-transparent text-slate-300 text-xs font-bold outline-none border-none p-0 pr-4 cursor-pointer">
+                        <option value="AUDJPY">AUD/JPY</option>
+                        <option value="USDJPY">USD/JPY</option>
+                    </select>
+                    <div class="flex items-center gap-1 text-[9px] text-slate-400 mt-1">
+                        <span class="opacity-70">Lev:</span>
+                        <span class="text-slate-200 font-bold" id="top-leverage-display">1:100</span>
+                    </div>
+                </div>
+                <input type="number" id="current-price-input" class="price-input text-2xl text-red-400 text-right" value="97.450" step="0.001">
+            </div>
+        </div>
+
+        <!-- 顶部右侧：净值显示 -->
+        <div class="text-right flex flex-col items-end justify-center">
+            <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-0.5">有効証拠金 (Equity)</div>
+            <div id="top-equity-display" class="mono text-xl font-bold text-white">¥1,000,000</div>
+        </div>
+    </header>
+
+    <!-- 中间内容区 -->
+    <div class="flex flex-1 overflow-hidden bg-[#0b1221]">
+        
+        <!-- 图表区域 -->
+        <div class="relative flex-1 bg-[#0b1221] overflow-hidden cursor-ew-resize" id="chart-container">
+            <canvas id="klineChart" class="block w-full h-full"></canvas>
+            
+            <!-- 右上角控制区 -->
+            <div class="absolute top-3 right-4 flex flex-col items-end gap-2 z-10" style="right: 70px;">
+                <div class="pointer-events-auto">
+                    <select id="speed-select" class="dark-select bg-slate-800/90 text-[10px] text-slate-300 border border-slate-700 rounded-md px-3 py-1 outline-none cursor-pointer hover:border-slate-500 transition shadow-lg font-mono">
+                        <option value="500">0.5s</option>
+                        <option value="1000">1.0s</option>
+                        <option value="3000" selected>3.0s (Def)</option>
+                        <option value="5000">5.0s</option>
+                        <option value="10000">10s</option>
+                        <option value="30000">30s</option>
+                        <option value="60000">1 Min</option>
+                        <option value="180000">3 Min</option>
+                        <option value="300000">5 Min</option>
+                    </select>
+                </div>
+                <div class="pointer-events-none select-none text-[10px] text-slate-600 font-mono bg-slate-900/50 px-2 py-0.5 rounded text-right w-full">
+                    次足: <span id="timer-display" class="text-slate-400">--</span>s
+                </div>
+            </div>
+
+            <div class="absolute top-3 left-4 pointer-events-none select-none opacity-40 text-[10px] text-slate-500">
+                ヒント: チャートをドラッグして履歴を確認 • スライダーで価格操作
+            </div>
+        </div>
+
+        <!-- 订单薄侧边栏 -->
+        <div class="w-40 bg-[#111827] border-l border-slate-800 flex flex-col z-20 hidden sm:flex">
+            <div class="p-2 text-[10px] text-slate-500 font-bold border-b border-slate-800 flex justify-between">
+                <span>板情報 (BOOK)</span>
+                <span class="text-slate-600">Vol</span>
+            </div>
+            <div id="ob-asks" class="flex-1 flex flex-col justify-end overflow-hidden pb-1"></div>
+            <div id="ob-current" class="py-1 bg-slate-800 text-center mono text-sm font-bold text-white border-y border-slate-700">--</div>
+            <div id="ob-bids" class="flex-1 flex flex-col justify-start overflow-hidden pt-1"></div>
+        </div>
+
+    </div>
+
+    <!-- 底部控制区 -->
+    <div class="flex-none bg-slate-900 border-t border-slate-800 p-3 z-30 shadow-[0_-4px_20px_rgba(0,0,0,0.3)]">
+        
+        <!-- 价格滑块 -->
+        <div class="mb-3 flex items-center gap-3 bg-slate-800/50 p-2 rounded-lg border border-slate-700/50">
+            <span class="text-xs text-slate-400 font-bold whitespace-nowrap">操作</span>
+            <input type="range" id="price-slider" class="price-slider flex-1" min="96.500" max="98.500" step="0.001" value="97.450">
+            <button id="reset-view-btn" class="text-[10px] bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded text-slate-300 transition">最新へ戻る</button>
+        </div>
+
+        <!-- 交易设置 -->
+        <div class="flex gap-2 mb-2">
+            <div class="flex flex-col gap-1 w-16">
+                <label class="text-[10px] text-slate-500">レバレッジ</label>
+                <select id="input-leverage" class="dark-select stealth-input mono font-bold text-xs p-1">
+                    <option value="10">1:10</option>
+                    <option value="25">1:25</option>
+                    <option value="50">1:50</option>
+                    <option value="100" selected>1:100</option>
+                    <option value="500">1:500</option>
+                </select>
+            </div>
+            
+            <div class="flex flex-col gap-1 w-20">
+                <label class="text-[10px] text-slate-500">ロット</label>
+                <input type="number" id="input-lots" class="stealth-input mono font-bold" value="1.0" step="0.1">
+            </div>
+            <div class="flex flex-col gap-1 w-24">
+                <label class="text-[10px] text-slate-500">平均建値</label>
+                <input type="number" id="input-cost" class="stealth-input mono font-bold text-slate-400" value="0.000" step="0.001" disabled>
+            </div>
+            <div class="flex-1 flex flex-col items-end justify-center pr-1">
+                <label class="text-[10px] text-slate-500">含み損益 (P/L)</label>
+                <div id="bottom-pl-display" class="mono text-lg font-bold text-slate-500">¥0 (0.00%)</div>
+            </div>
+        </div>
+
+        <!-- 持仓信息 (移至这里，位于按钮上方) -->
+        <div id="pos-info-bar" class="mb-2 p-2 rounded bg-slate-800 border border-slate-700 flex items-center justify-between min-h-[40px] hidden">
+            <div class="flex items-center gap-3">
+                <span id="pos-type-badge" class="px-2 py-0.5 rounded text-xs font-bold uppercase"></span>
+                <span id="pos-size-display" class="text-lg font-bold text-white font-mono"></span>
+            </div>
+            <div class="text-xs text-slate-400 font-mono flex items-center gap-2">
+                 <span>建値: <span id="pos-entry-price" class="text-slate-300"></span></span>
+                 <span>|</span>
+                 <span>現在: <span id="pos-current-price" class="text-slate-300"></span></span>
+            </div>
+        </div>
+
+        <!-- 按钮组 -->
+        <div class="grid grid-cols-2 gap-3 h-12">
+            <button id="btn-sell" class="bg-gradient-to-br from-red-600 to-red-700 hover:from-red-500 hover:to-red-600 text-white rounded-md shadow-lg flex flex-col items-center justify-center leading-none transition active:scale-[0.98]">
+                <span class="font-bold text-lg">売 (SELL)</span>
+                <span class="mono text-[10px] opacity-80" id="btn-price-sell">--</span>
+            </button>
+            <button id="btn-buy" class="bg-gradient-to-br from-green-600 to-green-700 hover:from-green-500 hover:to-green-600 text-white rounded-md shadow-lg flex flex-col items-center justify-center leading-none transition active:scale-[0.98]">
+                <span class="font-bold text-lg">買 (BUY)</span>
+                <span class="mono text-[10px] opacity-80" id="btn-price-buy">--</span>
+            </button>
+        </div>
+
+        <div class="flex justify-between mt-2 text-[10px] text-slate-500 px-1">
+            <div class="flex items-center gap-1.5">
+                <div class="live-dot"></div>
+                <span>MARKET OPEN</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 核心配置 ---
+        const CONFIG = {
+            symbol: 'AUDJPY', 
+            lotSize: 100000,
+            spread: 0.015,
+            baseTickRate: 100,
+            candleInterval: 3000,
+            visibleCandles: 30,
+            paddingTopBottom: 0.3,
+            rightGutter: 50,
+            symbols: {
+                'AUDJPY': { base: 97.450, vol: 0.015 },
+                'USDJPY': { base: 150.000, vol: 0.025 }
+            }
+        };
+
+        // --- 初始状态 ---
+        const defaultState = {
+            price: 97.450,
+            balance: 1000000,
+            equity: 1000000,
+            leverage: 100,
+            position: null, 
+            candles: [],
+            lastCandleTime: 0,
+            offsetX: 0,
+            regime: 'range',
+            regimeTimer: 0,
+            trendStrength: 0,
+            momentum: 0,
+            isUserInteracting: false,
+            userTargetPrice: null
+        };
+
+        let state = JSON.parse(JSON.stringify(defaultState));
+        let isDraggingChart = false;
+        let lastMouseX = 0;
+
+        // --- DOM 引用 ---
+        const ui = {
+            canvas: document.getElementById('klineChart'),
+            container: document.getElementById('chart-container'),
+            priceInput: document.getElementById('current-price-input'),
+            slider: document.getElementById('price-slider'),
+            resetBtn: document.getElementById('btn-reset'),
+            timerDisplay: document.getElementById('timer-display'),
+            speedSelect: document.getElementById('speed-select'),
+            leverageInput: document.getElementById('input-leverage'),
+            topLeverage: document.getElementById('top-leverage-display'),
+            symbolSelect: document.getElementById('symbol-select'),
+            
+            btnBuy: document.getElementById('btn-buy'),
+            btnSell: document.getElementById('btn-sell'),
+            btnPriceBuy: document.getElementById('btn-price-buy'),
+            btnPriceSell: document.getElementById('btn-price-sell'),
+            lotsInput: document.getElementById('input-lots'),
+            costInput: document.getElementById('input-cost'),
+            topEquity: document.getElementById('top-equity-display'),
+            bottomPl: document.getElementById('bottom-pl-display'),
+            
+            // 新增持仓信息栏
+            posInfoBar: document.getElementById('pos-info-bar'),
+            posTypeBadge: document.getElementById('pos-type-badge'),
+            posSizeDisplay: document.getElementById('pos-size-display'),
+            posEntryPrice: document.getElementById('pos-entry-price'),
+            posCurrentPrice: document.getElementById('pos-current-price'),
+            
+            obAsks: document.getElementById('ob-asks'),
+            obBids: document.getElementById('ob-bids'),
+            obCurrent: document.getElementById('ob-current')
+        };
+
+        const ctx = ui.canvas.getContext('2d');
+        let width, height;
+
+        // --- 初始化 ---
+        function init() {
+            resetSystem();
+            resize();
+            loop();
+        }
+
+        function resetSystem() {
+            const currentSymbol = CONFIG.symbol;
+            const currentLev = state.leverage;
+            
+            // 彻底重置状态
+            state = JSON.parse(JSON.stringify(defaultState));
+            state.leverage = currentLev;
+            CONFIG.symbol = currentSymbol;
+            state.balance = 1000000;
+            state.equity = 1000000;
+            
+            const symConfig = CONFIG.symbols[currentSymbol];
+            // 随机新价格
+            let p = symConfig.base + (Math.random() - 0.5) * 5.0; 
+            
+            ui.slider.min = (p - 2.0).toFixed(3);
+            ui.slider.max = (p + 2.0).toFixed(3);
+            
+            let time = Date.now() - 50 * CONFIG.candleInterval;
+            state.candles = [];
+            for(let i=0; i<50; i++) {
+                const change = (Math.random() - 0.5) * (symConfig.vol * 2);
+                const o = p;
+                const c = p + change;
+                const h = Math.max(o, c) + Math.random() * (symConfig.vol);
+                const l = Math.min(o, c) - Math.random() * (symConfig.vol);
+                state.candles.push({ time, open: o, high: h, low: l, close: c });
+                p = c;
+                time += CONFIG.candleInterval;
+            }
+            state.price = p;
+            state.lastCandleTime = Date.now();
+            startNewCandle(p);
+            
+            ui.costInput.disabled = true;
+            ui.costInput.value = "0.000";
+            ui.costInput.className = "stealth-input mono font-bold text-slate-400";
+            
+            updatePriceInputs(p);
+            updateUI();
+            updateOrderBook(p);
+        }
+
+        function startNewCandle(p) {
+            const now = Date.now();
+            state.lastCandleTime = now;
+            state.candles.push({ time: now, open: p, high: p, low: p, close: p });
+            if(state.candles.length > 300) state.candles.shift();
+        }
+
+        // --- 市场引擎 ---
+        function updateMarketLogic() {
+            state.regimeTimer--;
+            if(state.regimeTimer <= 0) {
+                const rand = Math.random();
+                if(rand < 0.5) {
+                    state.regime = 'range';
+                    state.trendStrength = 0;
+                } else if (rand < 0.75) {
+                    state.regime = 'bull';
+                    state.trendStrength = 0.0005 + Math.random() * 0.0005;
+                } else {
+                    state.regime = 'bear';
+                    state.trendStrength = -0.0005 - Math.random() * 0.0005;
+                }
+                state.regimeTimer = 50 + Math.floor(Math.random() * 100); 
+            }
+
+            let change = 0;
+            const symConfig = CONFIG.symbols[CONFIG.symbol];
+            const noise = (Math.random() - 0.5) * (symConfig.vol * 0.5);
+
+            if(state.regime === 'range') {
+                change = noise * 1.5;
+            } else {
+                state.momentum = state.momentum * 0.9 + state.trendStrength * 0.1;
+                change = state.momentum + noise;
+            }
+            
+            let baseP = state.isUserInteracting && state.userTargetPrice !== null ? state.userTargetPrice : state.price;
+            return baseP + change;
+        }
+
+        function setPrice(p) {
+            state.price = p;
+            const c = state.candles[state.candles.length - 1];
+            c.close = p;
+            if(p > c.high) c.high = p;
+            if(p < c.low) c.low = p;
+            
+            const now = Date.now();
+            if(now - state.lastCandleTime >= CONFIG.candleInterval) {
+                startNewCandle(p);
+                if(!isDraggingChart && state.offsetX > 0) state.offsetX = 0;
+            }
+            
+            const remaining = Math.max(0, CONFIG.candleInterval - (now - state.lastCandleTime));
+            ui.timerDisplay.innerText = (remaining / 1000).toFixed(1);
+            
+            updateUI();
+            if(Math.random() < 0.3) updateOrderBook(p);
+        }
+
+        // --- 交互处理 ---
+        ui.symbolSelect.addEventListener('change', (e) => {
+            CONFIG.symbol = e.target.value;
+            resetSystem();
+            ui.symbolSelect.blur();
+        });
+
+        ui.resetBtn.addEventListener('click', () => { 
+            if(confirm('シミュレーションをリセットしますか？ (确认重置?)')) resetSystem(); 
+        });
+
+        const onSliderInput = (e) => {
+            state.isUserInteracting = true;
+            state.userTargetPrice = parseFloat(e.target.value);
+            state.offsetX = 0;
+        };
+        const onSliderEnd = () => {
+            state.isUserInteracting = false;
+            state.userTargetPrice = null;
+        };
+
+        ui.slider.addEventListener('mousedown', () => state.isUserInteracting = true);
+        ui.slider.addEventListener('touchstart', () => state.isUserInteracting = true, {passive: true});
+        ui.slider.addEventListener('input', onSliderInput);
+        ui.slider.addEventListener('mouseup', onSliderEnd);
+        ui.slider.addEventListener('touchend', onSliderEnd);
+
+        ui.priceInput.addEventListener('focus', () => state.isUserInteracting = true);
+        ui.priceInput.addEventListener('input', (e) => {
+            const val = parseFloat(e.target.value);
+            if(!isNaN(val)) {
+                state.userTargetPrice = val;
+                if(val > parseFloat(ui.slider.max)) ui.slider.max = (val + 1).toFixed(3);
+                if(val < parseFloat(ui.slider.min)) ui.slider.min = (val - 1).toFixed(3);
+            }
+        });
+        ui.priceInput.addEventListener('blur', onSliderEnd);
+
+        ui.container.addEventListener('mousedown', (e) => { isDraggingChart = true; lastMouseX = e.clientX; });
+        window.addEventListener('mousemove', (e) => { 
+            if(!isDraggingChart) return; 
+            const dx = e.clientX - lastMouseX; lastMouseX = e.clientX; 
+            state.offsetX += dx; if(state.offsetX < 0) state.offsetX = 0; 
+        });
+        window.addEventListener('mouseup', () => { isDraggingChart = false; });
+        document.getElementById('reset-view-btn').addEventListener('click', () => { state.offsetX = 0; });
+
+        ui.btnBuy.addEventListener('click', () => trade('buy'));
+        ui.btnSell.addEventListener('click', () => trade('sell'));
+        ui.leverageInput.addEventListener('change', (e) => { 
+            state.leverage = parseInt(e.target.value); 
+            ui.topLeverage.innerText = `1:${state.leverage}`; 
+            ui.leverageInput.blur();
+        });
+        ui.speedSelect.addEventListener('change', (e) => {
+            CONFIG.candleInterval = parseInt(e.target.value);
+            ui.speedSelect.blur();
+        });
+
+        // --- 核心交易逻辑 ---
+        function trade(type) {
+            const tradeLots = parseFloat(ui.lotsInput.value);
+            const currentPrice = state.price;
+            const tradePrice = type === 'buy' ? currentPrice + CONFIG.spread : currentPrice;
+            const requiredMargin = (tradePrice * tradeLots * CONFIG.lotSize) / state.leverage;
+
+            let isOpeningOrAdding = true;
+            if (state.position && state.position.type !== type && tradeLots <= state.position.lots) {
+                isOpeningOrAdding = false; 
+            }
+
+            if (isOpeningOrAdding && state.equity < requiredMargin) {
+                alert(`証拠金不足です！(保证金不足)\n必要: ¥${Math.floor(requiredMargin).toLocaleString()}\n有効: ¥${Math.floor(state.equity).toLocaleString()}`);
+                return;
+            }
+
+            if (!state.position) {
+                const liq = calculateLiquidationPrice(tradePrice, tradeLots, type, state.balance);
+                state.position = { type, lots: tradeLots, price: tradePrice, liquidationPrice: liq, leverage: state.leverage };
+            } else {
+                if (state.position.type === type) {
+                    const totalLots = state.position.lots + tradeLots;
+                    const avgPrice = ((state.position.price * state.position.lots) + (tradePrice * tradeLots)) / totalLots;
+                    state.position.lots = totalLots;
+                    state.position.price = avgPrice;
+                    state.position.liquidationPrice = calculateLiquidationPrice(avgPrice, totalLots, type, state.balance);
+                } else {
+                    const closeLots = Math.min(state.position.lots, tradeLots);
+                    const diff = state.position.type === 'buy' 
+                        ? tradePrice - state.position.price
+                        : state.position.price - tradePrice;
+                    
+                    const realizedPL = diff * closeLots * CONFIG.lotSize;
+                    state.balance += realizedPL;
+
+                    if (tradeLots < state.position.lots) {
+                        state.position.lots -= tradeLots;
+                        state.position.liquidationPrice = calculateLiquidationPrice(state.position.price, state.position.lots, state.position.type, state.balance);
+                    } else if (tradeLots === state.position.lots) {
+                        state.position = null;
+                    } else {
+                        const remainingLots = tradeLots - state.position.lots;
+                        const liq = calculateLiquidationPrice(tradePrice, remainingLots, type, state.balance);
+                        state.position = { type, lots: remainingLots, price: tradePrice, liquidationPrice: liq, leverage: state.leverage };
+                    }
+                }
+            }
+            
+            if (state.position) {
+                ui.costInput.disabled = false;
+                ui.costInput.value = state.position.price.toFixed(3);
+                ui.costInput.className = "stealth-input mono font-bold text-white";
+            } else {
+                ui.costInput.disabled = true;
+                ui.costInput.value = "0.000";
+                ui.costInput.className = "stealth-input mono font-bold text-slate-400";
+            }
+            updateUI();
+        }
+
+        function calculateLiquidationPrice(entry, lots, type, bal) {
+            const move = bal / (lots * CONFIG.lotSize);
+            return type === 'buy' ? entry - move : entry + move;
+        }
+
+        function loop() {
+            const newPrice = updateMarketLogic();
+            setPrice(newPrice);
+            updatePriceInputs(newPrice);
+            draw();
+            setTimeout(() => requestAnimationFrame(loop), CONFIG.baseTickRate);
+        }
+
+        function updatePriceInputs(p) {
+            if(document.activeElement !== ui.priceInput) {
+                ui.priceInput.value = p.toFixed(3);
+                const prev = state.candles.length > 1 ? state.candles[state.candles.length-2].close : p;
+                ui.priceInput.className = `price-input text-2xl text-right ${p >= prev ? 'text-green-400' : 'text-red-400'}`;
+            }
+            if(!state.isUserInteracting) {
+                ui.slider.value = p.toFixed(3);
+            }
+        }
+
+        function updateUI() {
+            ui.btnPriceSell.innerText = state.price.toFixed(3);
+            ui.btnPriceBuy.innerText = (state.price + CONFIG.spread).toFixed(3);
+
+            let pl = 0;
+            if(state.position) {
+                const diff = state.position.type === 'buy' 
+                    ? state.price - state.position.price
+                    : state.position.price - state.price;
+                pl = diff * state.position.lots * CONFIG.lotSize;
+                
+                // 底部持仓信息栏 (位于按钮上方)
+                ui.posInfoBar.classList.remove('hidden');
+                
+                const typeText = state.position.type === 'buy' ? '買 (BUY)' : '売 (SELL)';
+                const typeClass = state.position.type === 'buy' ? 'bg-green-600 text-white' : 'bg-red-600 text-white';
+                
+                ui.posTypeBadge.textContent = typeText;
+                ui.posTypeBadge.className = `px-2 py-0.5 rounded text-xs font-bold uppercase ${typeClass}`;
+                
+                ui.posSizeDisplay.textContent = state.position.lots.toFixed(1) + " Lot";
+                
+                ui.posEntryPrice.textContent = state.position.price.toFixed(3);
+                ui.posCurrentPrice.textContent = state.price.toFixed(3);
+            } else {
+                ui.posInfoBar.classList.add('hidden');
+            }
+
+            const equity = state.balance + pl;
+            state.equity = equity; 
+            
+            // 盈亏百分比
+            const pct = (pl / state.balance) * 100;
+            const sign = pl >= 0 ? '+' : '';
+            const plText = `${sign}¥${Math.floor(pl).toLocaleString()} (${sign}${pct.toFixed(2)}%)`;
+            
+            ui.topEquity.innerText = "¥" + Math.floor(equity).toLocaleString();
+            ui.bottomPl.innerText = plText;
+            ui.bottomPl.className = `mono text-lg font-bold ${pl >= 0 ? 'text-green-500' : 'text-red-500'}`;
+
+            if(equity <= 0 && state.position) {
+                alert("ロスカット執行！口座残高がゼロになりました。\n(账户爆仓，净值归零)");
+                resetSystem();
+            }
+        }
+
+        function updateOrderBook(price) {
+            ui.obCurrent.innerText = price.toFixed(3);
+            ui.obCurrent.className = `py-1 bg-slate-800 text-center mono text-sm font-bold border-y border-slate-700 ${state.candles.length > 1 && price >= state.candles[state.candles.length-2].close ? 'text-green-400' : 'text-red-400'}`;
+            const generateRows = (basePrice, type, count) => {
+                let html = '';
+                for(let i=1; i<=count; i++) {
+                    const spread = i * 0.005 + (Math.random() * 0.005);
+                    const p = type === 'ask' ? basePrice + spread : basePrice - spread;
+                    const vol = (Math.random() * 5 + 0.5).toFixed(2);
+                    const widthPct = Math.min(100, (vol / 5) * 100);
+                    const bgClass = type === 'ask' ? 'bg-red-500' : 'bg-green-500';
+                    const textClass = type === 'ask' ? 'text-red-400' : 'text-green-400';
+                    const rowHtml = `
+                        <div class="relative order-book-row cursor-pointer hover:bg-slate-800">
+                            <div class="order-book-bar ${bgClass}" style="width: ${widthPct}%"></div>
+                            <span class="${textClass} z-10">${p.toFixed(3)}</span>
+                            <span class="text-slate-400 z-10">${vol}M</span>
+                        </div>
+                    `;
+                    if(type === 'ask') html = rowHtml + html; else html += rowHtml;
+                }
+                return html;
+            };
+            ui.obAsks.innerHTML = generateRows(price, 'ask', 8);
+            ui.obBids.innerHTML = generateRows(price, 'bid', 8);
+        }
+
+        function draw() {
+            ctx.clearRect(0, 0, width, height);
+            const chartW = width - CONFIG.rightGutter;
+            const candleW = chartW / CONFIG.visibleCandles;
+            const offsetCount = Math.floor(state.offsetX / candleW);
+            const endIndex = state.candles.length - 1 - offsetCount;
+            const startIndex = endIndex - CONFIG.visibleCandles - 2;
+
+            let maxP = -Infinity, minP = Infinity;
+            for(let i=Math.max(0, startIndex); i<=Math.min(state.candles.length-1, endIndex); i++) {
+                const c = state.candles[i];
+                if(c.high > maxP) maxP = c.high;
+                if(c.low < minP) minP = c.low;
+            }
+            if(state.position) {
+                if(state.position.price > maxP) maxP = state.position.price;
+                if(state.position.price < minP) minP = state.position.price;
+            }
+            if(maxP === -Infinity) { maxP = state.price + 0.1; minP = state.price - 0.1; }
+            const range = Math.max(maxP - minP, 0.05);
+            const padding = range * CONFIG.paddingTopBottom;
+            const drawMax = maxP + padding;
+            const drawMin = minP - padding;
+            const getY = p => height - ((p - drawMin) / (drawMax - drawMin)) * height;
+
+            ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1; ctx.beginPath();
+            for(let i=1; i<5; i++) {
+                const p = drawMin + (drawMax - drawMin)/5 * i;
+                const y = getY(p);
+                ctx.moveTo(0, y); ctx.lineTo(width, y);
+                ctx.fillStyle = '#64748b'; ctx.font = '11px JetBrains Mono';
+                ctx.fillText(p.toFixed(3), chartW + 5, y + 4);
+            }
+            ctx.stroke();
+
+            ctx.beginPath(); ctx.moveTo(chartW, 0); ctx.lineTo(chartW, height);
+            ctx.strokeStyle = '#334155'; ctx.stroke();
+
+            ctx.save(); ctx.beginPath(); ctx.rect(0, 0, chartW, height); ctx.clip();
+            if(state.position) {
+                const yc = getY(state.position.price);
+                if(yc > -20 && yc < height+20) {
+                    ctx.beginPath(); ctx.strokeStyle='#3b82f6'; ctx.setLineDash([5,3]);
+                    ctx.moveTo(0, yc); ctx.lineTo(chartW, yc); ctx.stroke();
+                    ctx.fillStyle='#3b82f6'; ctx.font='bold 10px JetBrains Mono';
+                    ctx.fillText('AVG', 5, yc - 4);
+                }
+                const yl = getY(state.position.liquidationPrice);
+                if(yl > -20 && yl < height+20) {
+                    ctx.beginPath(); ctx.strokeStyle='#f97316'; ctx.setLineDash([2,2]);
+                    ctx.moveTo(0, yl); ctx.lineTo(chartW, yl); ctx.stroke();
+                    ctx.fillStyle='#f97316'; ctx.font='bold 10px JetBrains Mono';
+                    ctx.fillText('LIQ', 5, yl - 4);
+                }
+            }
+            ctx.restore();
+
+            for(let i=0; i<state.candles.length; i++) {
+                const idxFromEnd = state.candles.length - 1 - i;
+                const x = chartW + state.offsetX - (idxFromEnd * candleW) - candleW;
+                if(x > chartW + 50 || x < -50) continue;
+                const c = state.candles[i];
+                const isBull = c.close >= c.open;
+                const color = isBull ? '#22c55e' : '#ef4444';
+                const yO = getY(c.open), yC = getY(c.close), yH = getY(c.high), yL = getY(c.low);
+                ctx.fillStyle = color; ctx.strokeStyle = color;
+                ctx.beginPath(); ctx.moveTo(x + candleW/2, yH); ctx.lineTo(x + candleW/2, yL); ctx.stroke();
+                const hBody = Math.max(1, Math.abs(yC - yO));
+                ctx.fillRect(x+1, Math.min(yO, yC), candleW-2, hBody);
+            }
+
+            const yCur = getY(state.price);
+            if(yCur > -20 && yCur < height+20) {
+                ctx.beginPath(); ctx.strokeStyle='#94a3b8'; ctx.setLineDash([2,2]);
+                ctx.moveTo(0, yCur); ctx.lineTo(chartW, yCur); ctx.stroke(); ctx.setLineDash([]);
+                ctx.fillStyle = state.price >= (state.candles[state.candles.length-2]?.close||0) ? '#22c55e' : '#ef4444';
+                ctx.fillRect(chartW, yCur-10, CONFIG.rightGutter, 20);
+                ctx.fillStyle = '#fff'; ctx.font='bold 11px JetBrains Mono';
+                ctx.fillText(state.price.toFixed(3), chartW+5, yCur+4);
+            }
+        }
+
+        function resize() {
+            width = ui.container.offsetWidth;
+            height = ui.container.offsetHeight;
+            ui.canvas.width = width;
+            ui.canvas.height = height;
+        }
+        window.addEventListener('resize', resize);
+        
+        init();
+
+    </script>
+</body>
+</html>
