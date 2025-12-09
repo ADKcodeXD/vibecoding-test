@@ -1,13 +1,16 @@
-# Vibecoding quick index
+# React + Vite
 
-Static GitHub Pages front page that lists HTML pages under `web/` in a repository via the GitHub API and links to open them directly.
+This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
 
-## How to use
-- Initialize and push this folder to a GitHub repo (e.g. `git init`, add remote, `git add . && git commit -m "Add index" && git push -u origin main`).
-- Turn on GitHub Pages for that repo (Settings → Pages → Deploy from Branch → `main` / `/`).
-- Visit the published site; on `*.github.io/<repo>` it auto-detects owner/repo. Otherwise fill Owner/Repo/Branch in the form and hit Save.
-- The browser fetches `web/` contents from GitHub; any `.html` file there will show as a card that opens the live page (`/web/<file>.html`), with raw/GitHub links beside it.
+Currently, two official plugins are available:
 
-## Notes
-- Config is kept in `localStorage` (`vibecoding-repo`) so you can point the index at any repo without redeploying.
-- GitHub API is unauthenticated here; heavy traffic could hit rate limits (60 req/hr per IP). Add your own tokenized fetch if needed.
+- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
+- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+
+## React Compiler
+
+The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+
+## Expanding the ESLint configuration
+
+If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.

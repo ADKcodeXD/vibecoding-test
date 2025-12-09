@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Vibecoding · Web Launcher</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600&family=Space+Grotesk:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="page">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">Vibecoding · GitHub Pages</p>
+        <h1>主页面入口 & web/ 子页面导航</h1>
+        <p class="lede">
+          直接访问主页，并从这里一键跳转到 <code>web/</code> 目录下的各个页面。无需配置仓库信息，发布到 GitHub Pages 后即可使用。
+        </p>
+        <div class="actions">
+          <a class="button primary" href="#listing">查看 web 页面</a>
+          <button id="refresh" class="button ghost" type="button">重新加载列表</button>
+        </div>
+      </div>
+      <div class="hero-card">
+        <p>使用方式</p>
+        <ol>
+          <li>在 <code>web/</code> 目录放入你的 HTML 页面</li>
+          <li>更新 <code>pages.json</code>（或使用内置默认列表）</li>
+          <li>推送到 GitHub，开启 Pages 即可访问</li>
+        </ol>
+        <span class="pill">无需打包 · 纯静态</span>
+      </div>
+    </header>
+
+    <section class="panel">
+      <div class="panel__header">
+        <div>
+          <div class="breadcrumbs">当前目录：/web</div>
+          <div class="status" id="status">正在读取 web/ …</div>
+        </div>
+      </div>
+      <ul class="listing" id="listing" aria-live="polite"></ul>
+    </section>
+  </div>
+
+  <script src="script.js" type="module"></script>
+</body>
+</html>
