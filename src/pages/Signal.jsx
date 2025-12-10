@@ -821,10 +821,10 @@ export default function Signal() {
         )}
 
         {/* Dashboard Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <div className="space-y-6">
           
-          {/* Left: Chart & Summary */}
-          <div className="lg:col-span-8 space-y-4">
+          {/* Top: Chart & Summary */}
+          <div className="w-full space-y-4">
             {/* Price Card */}
             <div className="flex flex-wrap justify-between items-end bg-[#151921] p-5 rounded-xl border border-slate-800/50">
                <div>
@@ -840,7 +840,11 @@ export default function Signal() {
                     </button>
                  </div>
                  <div className="text-4xl font-bold tracking-tight text-slate-100 mt-2">
-                   ${currentPrice.toLocaleString(undefined, {maximumFractionDigits: 4})}
+                   {loading ? (
+                       <span className="animate-pulse bg-slate-800 rounded h-10 w-48 block"></span>
+                   ) : (
+                       `$${currentPrice.toLocaleString(undefined, {maximumFractionDigits: 4})}`
+                   )}
                  </div>
                </div>
                <div className={`text-right ${change24h >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -854,6 +858,9 @@ export default function Signal() {
 
             {/* Chart */}
             <div className="h-[400px] w-full bg-[#151921] rounded-xl border border-slate-800/50 p-1 relative shadow-lg">
+              {loading && <div className="absolute inset-0 z-10 bg-[#151921]/80 flex items-center justify-center text-slate-500 text-sm">Loading Data...</div>}
+              {error && <div className="absolute inset-0 z-10 bg-[#151921]/90 flex items-center justify-center text-rose-400 text-sm">{error}</div>}
+              
               <ResponsiveContainer width="100%" height="100%">
                 <ComposedChart data={data}>
                   <defs>
@@ -925,25 +932,25 @@ export default function Signal() {
              </div>
           </div>
 
-          {/* Right: Factors List */}
-          <div className="lg:col-span-4 flex flex-col h-full bg-[#151921] rounded-xl border border-slate-800/50 overflow-hidden shadow-xl">
-            <div className="p-4 border-b border-slate-800/50 flex items-center justify-between bg-[#1a1f29]">
+          {/* Bottom: Factors Grid */}
+          <div className="w-full">
+            <div className="mb-4 flex items-center justify-between">
                <h3 className="font-bold text-sm text-slate-200 flex items-center gap-2">
                  <Flame size={16} className="text-orange-400" />
-                 Alpha Drivers
+                 Alpha Drivers Library
                </h3>
-               <span className="text-[10px] text-slate-500">{factors.length} metrics</span>
+               <span className="text-[10px] text-slate-500">{factors.length} metrics monitored</span>
             </div>
             
-            <div className="flex-1 overflow-y-auto custom-scrollbar p-3 space-y-3 relative">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               {factors.length === 0 && (
-                <div className="text-center text-slate-500 text-xs py-10">暂无活跃因子或数据不足</div>
+                <div className="col-span-full text-center text-slate-500 text-xs py-10">暂无活跃因子或数据不足</div>
               )}
               
               {factors.map((factor, idx) => (
                 <div 
                   key={idx} 
-                  className="relative p-4 rounded-xl bg-[#0b0e14] border border-slate-800/50 hover:border-indigo-500/40 hover:bg-[#11141d] transition-all cursor-help group"
+                  className="relative p-4 rounded-xl bg-[#151921] border border-slate-800/50 hover:border-indigo-500/40 hover:bg-[#1a1f29] transition-all cursor-help group"
                   onMouseEnter={(e) => {
                     setHoveredFactor(factor.id);
                     setHoveredFactorPos({ x: e.clientX, y: e.clientY });
@@ -967,7 +974,15 @@ export default function Signal() {
                     </div>
                   </div>
                   
-                  <div className="text-[10px] text-slate-500">{factor.description}</div>
+                  {/* Visual Preview */}
+                  <div className="h-16 w-full bg-[#0b0e14] rounded-lg mb-3 flex items-center justify-center opacity-70 group-hover:opacity-100 transition-opacity">
+                      <VisualDiagram type={factor.visualType} signal={factor.signal} />
+                  </div>
+
+                  <div className="flex justify-between items-center text-xs">
+                     <span className="text-slate-500">{factor.description.substring(0, 12)}...</span>
+                     <span className="font-mono text-slate-300">{factor.value}</span>
+                  </div>
                 </div>
               ))}
             </div>

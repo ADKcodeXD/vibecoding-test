@@ -227,6 +227,8 @@ export default function FxSimulator() {
     requestRef.current = requestAnimationFrame(loop);
 
     window.addEventListener('resize', handleResize);
+    // Initial resize to set correct dimensions
+    handleResize();
     
     return () => {
         cancelAnimationFrame(requestRef.current);
@@ -459,153 +461,171 @@ export default function FxSimulator() {
      const cvs = canvasRef.current;
      if (!cvs || !cvs.getContext) return;
      const ctx = cvs.getContext('2d');
-     const width = cvs.width;
-     const height = cvs.height;
-     const s = state.current;
+      const width = cvs.width;
+      const height = cvs.height;
+      const dpr = window.devicePixelRatio || 1;
+      
+      // Logical size for calculations
+      const logicalW = width / dpr;
+      const logicalH = height / dpr;
 
-     ctx.clearRect(0, 0, width, height);
-     
-     const priceHeight = height * 0.8;
-     const volHeight = height * 0.2;
-     const chartW = width - s.rightGutter;
-     const candleW = chartW / s.visibleCandles;
-     const offsetCount = Math.floor(s.offsetX / candleW);
-     const endIndex = s.candles.length - 1 - offsetCount;
-     const startIndex = endIndex - s.visibleCandles - 2;
+      const s = state.current;
 
-     let maxP = -Infinity, minP = Infinity;
-     let maxVol = 0;
+      ctx.clearRect(0, 0, width, height);
+      ctx.save();
+      ctx.scale(dpr, dpr);
+      
+      const priceHeight = logicalH * 0.8;
+      const volHeight = logicalH * 0.2;
+      const chartW = logicalW - s.rightGutter;
+      const candleW = chartW / s.visibleCandles;
+      const offsetCount = Math.floor(s.offsetX / candleW);
+      const endIndex = s.candles.length - 1 - offsetCount;
+      const startIndex = endIndex - s.visibleCandles - 2;
 
-     for(let i=Math.max(0, startIndex); i<=Math.min(s.candles.length-1, endIndex); i++) {
-         const c = s.candles[i];
-         if(c.high > maxP) maxP = c.high;
-         if(c.low < minP) minP = c.low;
-         if(c.volume > maxVol) maxVol = c.volume;
-     }
-     
-     if(s.position) {
-         if(s.position.price > maxP) maxP = s.position.price;
-         if(s.position.price < minP) minP = s.position.price;
-     }
+      let maxP = -Infinity, minP = Infinity;
+      let maxVol = 0;
 
-     if(maxP === -Infinity) { maxP = s.price + 0.1; minP = s.price - 0.1; }
-     if(maxVol === 0) maxVol = 100;
+      for(let i=Math.max(0, startIndex); i<=Math.min(s.candles.length-1, endIndex); i++) {
+          const c = s.candles[i];
+          if(c.high > maxP) maxP = c.high;
+          if(c.low < minP) minP = c.low;
+          if(c.volume > maxVol) maxVol = c.volume;
+      }
+      
+      if(s.position) {
+          if(s.position.price > maxP) maxP = s.position.price;
+          if(s.position.price < minP) minP = s.position.price;
+      }
 
-     const range = Math.max(maxP - minP, 0.05);
-     const padding = range * s.paddingTopBottom;
-     const drawMax = maxP + padding;
-     const drawMin = minP - padding;
+      if(maxP === -Infinity) { maxP = s.price + 0.1; minP = s.price - 0.1; }
+      if(maxVol === 0) maxVol = 100;
 
-     const getPriceY = p => priceHeight - ((p - drawMin) / (drawMax - drawMin)) * priceHeight;
-     const getVolHeight = v => (v / maxVol) * (volHeight * 0.9);
+      const range = Math.max(maxP - minP, 0.05);
+      const padding = range * s.paddingTopBottom;
+      const drawMax = maxP + padding;
+      const drawMin = minP - padding;
 
-     // Grid
-     ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1; ctx.beginPath();
-     for(let i=1; i<5; i++) {
-         const p = drawMin + (drawMax - drawMin)/5 * i;
-         const y = getPriceY(p);
-         ctx.moveTo(0, y); ctx.lineTo(width, y);
-         ctx.fillStyle = '#64748b'; ctx.font = '11px JetBrains Mono';
-         ctx.fillText(p.toFixed(3), chartW + 5, y + 4);
-     }
-     ctx.stroke();
+      const getPriceY = p => priceHeight - ((p - drawMin) / (drawMax - drawMin)) * priceHeight;
+      const getVolHeight = v => (v / maxVol) * (volHeight * 0.9);
 
-     // Separator
-     ctx.strokeStyle = '#334155'; ctx.lineWidth = 2; ctx.beginPath();
-     ctx.moveTo(0, priceHeight); ctx.lineTo(width, priceHeight);
-     ctx.stroke();
+      // Grid
+      ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 1; ctx.beginPath();
+      for(let i=1; i<5; i++) {
+          const p = drawMin + (drawMax - drawMin)/5 * i;
+          const y = getPriceY(p);
+          ctx.moveTo(0, y); ctx.lineTo(logicalW, y);
+          ctx.fillStyle = '#64748b'; ctx.font = '11px JetBrains Mono';
+          ctx.fillText(p.toFixed(3), chartW + 5, y + 4);
+      }
+      ctx.stroke();
 
-     // Helper Lines (Cost / Liq)
-     ctx.save(); ctx.beginPath(); ctx.rect(0, 0, chartW, priceHeight); ctx.clip();
-     if(s.position) {
-         const yc = getPriceY(s.position.price);
-         if(yc > -20 && yc < priceHeight+20) {
-             ctx.beginPath(); ctx.strokeStyle='#3b82f6'; ctx.setLineDash([5,3]); ctx.lineWidth=1;
-             ctx.moveTo(0, yc); ctx.lineTo(chartW, yc); ctx.stroke();
-             ctx.fillStyle='#3b82f6'; ctx.font='bold 10px JetBrains Mono';
-             ctx.fillText('AVG', 5, yc - 4);
-         }
-         const yl = getPriceY(s.position.liquidationPrice);
-         if(yl > -20 && yl < priceHeight+20) {
-             ctx.beginPath(); ctx.strokeStyle='#f97316'; ctx.setLineDash([2,2]); ctx.lineWidth=1;
-             ctx.moveTo(0, yl); ctx.lineTo(chartW, yl); ctx.stroke();
-             ctx.fillStyle='#f97316'; ctx.font='bold 10px JetBrains Mono';
-             ctx.fillText('LIQ', 5, yl - 4);
-         }
-     }
-     ctx.setLineDash([]);
+      // Separator
+      ctx.strokeStyle = '#334155'; ctx.lineWidth = 2; ctx.beginPath();
+      ctx.moveTo(0, priceHeight); ctx.lineTo(logicalW, priceHeight);
+      ctx.stroke();
 
-     // Candles
-     for(let i=0; i<s.candles.length; i++) {
-         const idxFromEnd = s.candles.length - 1 - i;
-         const x = chartW + s.offsetX - (idxFromEnd * candleW) - candleW;
-         
-         if(x > chartW + 50 || x < -50) continue;
+      // Helper Lines (Cost / Liq)
+      ctx.save(); ctx.beginPath(); ctx.rect(0, 0, chartW, priceHeight); ctx.clip();
+      if(s.position) {
+          const yc = getPriceY(s.position.price);
+          if(yc > -20 && yc < priceHeight+20) {
+              ctx.beginPath(); ctx.strokeStyle='#3b82f6'; ctx.setLineDash([5,3]); ctx.lineWidth=1;
+              ctx.moveTo(0, yc); ctx.lineTo(chartW, yc); ctx.stroke();
+              ctx.fillStyle='#3b82f6'; ctx.font='bold 10px JetBrains Mono';
+              ctx.fillText('AVG', 5, yc - 4);
+          }
+          const yl = getPriceY(s.position.liquidationPrice);
+          if(yl > -20 && yl < priceHeight+20) {
+              ctx.beginPath(); ctx.strokeStyle='#f97316'; ctx.setLineDash([2,2]); ctx.lineWidth=1;
+              ctx.moveTo(0, yl); ctx.lineTo(chartW, yl); ctx.stroke();
+              ctx.fillStyle='#f97316'; ctx.font='bold 10px JetBrains Mono';
+              ctx.fillText('LIQ', 5, yl - 4);
+          }
+      }
+      ctx.setLineDash([]);
 
-         const c = s.candles[i];
-         const isBull = c.close >= c.open;
-         const color = isBull ? '#22c55e' : '#ef4444';
-         
-         // Candle
-         const yO = getPriceY(c.open);
-         const yC = getPriceY(c.close);
-         const yH = getPriceY(c.high);
-         const yL = getPriceY(c.low);
+      // Candles
+      for(let i=0; i<s.candles.length; i++) {
+          const idxFromEnd = s.candles.length - 1 - i;
+          const x = chartW + s.offsetX - (idxFromEnd * candleW) - candleW;
+          
+          if(x > chartW + 50 || x < -50) continue;
 
-         ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 1;
-         ctx.beginPath(); ctx.moveTo(x + candleW/2, yH); ctx.lineTo(x + candleW/2, yL); ctx.stroke();
-         const hBody = Math.max(1, Math.abs(yC - yO));
-         ctx.fillRect(x+1, Math.min(yO, yC), candleW-2, hBody);
+          const c = s.candles[i];
+          const isBull = c.close >= c.open;
+          const color = isBull ? '#22c55e' : '#ef4444';
+          
+          // Candle
+          const yO = getPriceY(c.open);
+          const yC = getPriceY(c.close);
+          const yH = getPriceY(c.high);
+          const yL = getPriceY(c.low);
 
-         // Volume
-         const vH = getVolHeight(c.volume);
-         const vY = height - vH; 
-         ctx.globalAlpha = 0.5;
-         ctx.fillRect(x+1, vY, candleW-2, vH);
-         ctx.globalAlpha = 1.0;
-     }
+          ctx.fillStyle = color; ctx.strokeStyle = color; ctx.lineWidth = 1;
+          ctx.beginPath(); ctx.moveTo(x + candleW/2, yH); ctx.lineTo(x + candleW/2, yL); ctx.stroke();
+          const hBody = Math.max(1, Math.abs(yC - yO));
+          ctx.fillRect(x+1, Math.min(yO, yC), candleW-2, hBody);
 
-     // MA
-     ctx.beginPath();
-     ctx.strokeStyle = '#fbbf24'; 
-     ctx.lineWidth = 2;
-     let firstPoint = true;
-     for(let i=0; i<s.candles.length; i++) {
-         const idxFromEnd = s.candles.length - 1 - i;
-         const x = chartW + s.offsetX - (idxFromEnd * candleW) - candleW/2; 
-         if(x > chartW + 100 || x < -100) continue;
-         if (i < s.maPeriod - 1) continue; 
-         
-         let sum = 0;
-         for (let k = 0; k < s.maPeriod; k++) {
-             sum += s.candles[i - k].close;
-         }
-         const maVal = sum / s.maPeriod;
-         const maY = getPriceY(maVal);
+          // Volume
+          const vH = getVolHeight(c.volume);
+          const vY = logicalH - vH; 
+          ctx.globalAlpha = 0.5;
+          ctx.fillRect(x+1, vY, candleW-2, vH);
+          ctx.globalAlpha = 1.0;
+      }
 
-         if (firstPoint) { ctx.moveTo(x, maY); firstPoint = false; } 
-         else { ctx.lineTo(x, maY); }
-     }
-     ctx.stroke();
-     ctx.restore();
+      // MA
+      ctx.beginPath();
+      ctx.strokeStyle = '#fbbf24'; 
+      ctx.lineWidth = 2;
+      let firstPoint = true;
+      for(let i=0; i<s.candles.length; i++) {
+          const idxFromEnd = s.candles.length - 1 - i;
+          const x = chartW + s.offsetX - (idxFromEnd * candleW) - candleW/2; 
+          if(x > chartW + 100 || x < -100) continue;
+          if (i < s.maPeriod - 1) continue; 
+          
+          let sum = 0;
+          for (let k = 0; k < s.maPeriod; k++) {
+              sum += s.candles[i - k].close;
+          }
+          const maVal = sum / s.maPeriod;
+          const maY = getPriceY(maVal);
 
-     // Cur Price Line
-     const yCur = getPriceY(s.price);
-     if(yCur > -20 && yCur < priceHeight + 20) {
-         ctx.beginPath(); ctx.strokeStyle='#94a3b8'; ctx.setLineDash([2,2]); ctx.lineWidth=1;
-         ctx.moveTo(0, yCur); ctx.lineTo(chartW, yCur); ctx.stroke(); ctx.setLineDash([]);
-         
-         ctx.fillStyle = s.price >= (s.candles[s.candles.length-2]?.close||0) ? '#22c55e' : '#ef4444';
-         ctx.fillRect(chartW, yCur-10, s.rightGutter, 20);
-         ctx.fillStyle = '#fff'; ctx.font='bold 11px JetBrains Mono';
-         ctx.fillText(s.price.toFixed(3), chartW+5, yCur+4);
-     }
+          if (firstPoint) { ctx.moveTo(x, maY); firstPoint = false; } 
+          else { ctx.lineTo(x, maY); }
+      }
+      ctx.stroke();
+      ctx.restore(); // Restore clips
+      
+      // Cur Price Line (Outside clip?)
+      const yCur = getPriceY(s.price);
+      if(yCur > -20 && yCur < priceHeight + 20) {
+          ctx.beginPath(); ctx.strokeStyle='#94a3b8'; ctx.setLineDash([2,2]); ctx.lineWidth=1;
+          ctx.moveTo(0, yCur); ctx.lineTo(chartW, yCur); ctx.stroke(); ctx.setLineDash([]);
+          
+          ctx.fillStyle = s.price >= (s.candles[s.candles.length-2]?.close||0) ? '#22c55e' : '#ef4444';
+          ctx.fillRect(chartW, yCur-10, s.rightGutter, 20);
+          ctx.fillStyle = '#fff'; ctx.font='bold 11px JetBrains Mono';
+          ctx.fillText(s.price.toFixed(3), chartW+5, yCur+4);
+      }
+      
+      ctx.restore(); // Restore Scale from top
   };
 
   const handleResize = () => {
       if(containerRef.current && canvasRef.current) {
-          canvasRef.current.width = containerRef.current.offsetWidth;
-          canvasRef.current.height = containerRef.current.offsetHeight;
+          const rect = containerRef.current.getBoundingClientRect();
+          const dpr = window.devicePixelRatio || 1;
+          
+          // Set physical pixels
+          canvasRef.current.width = rect.width * dpr;
+          canvasRef.current.height = rect.height * dpr;
+          
+          // Ensure style matches logical size (usually handled by CSS w-full h-full, but good to be safe)
+          // canvasRef.current.style.width = `${rect.width}px`;
+          // canvasRef.current.style.height = `${rect.height}px`;
       }
   };
 
