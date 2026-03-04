@@ -1,16 +1,41 @@
-# React + Vite
+# Scene Prompt Builder
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+一个基于 **Vite + React** 的分镜提示词编辑器，支持：
 
-Currently, two official plugins are available:
+- 多 Project 管理
+- 每个 Project 下多 Scene 管理
+- 每个 Scene 下多 Cut 增删改
+- Project / Scene 两级固定提示词
+- 当前 Scene 一键导出完整提示词（含分镜逐条）并复制
+- 数据持久化到浏览器 `localStorage`
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## 本地运行
 
-## React Compiler
+```bash
+npm install
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+默认地址：`http://localhost:5173`
 
-## Expanding the ESLint configuration
+## 构建
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```bash
+npm run build
+```
+
+## 导出格式说明
+
+导出文本结构：
+
+1. 项目名称
+2. 整体风格（Project 级固定提示词）
+3. 场景名称
+4. 场景关系/场景固定提示词
+5. 分镜逐条（Cut 1, Cut 2...）
+   - 镜头景别
+   - 镜头运动
+   - 构图
+   - 人物
+   - 人物动作
+   - 对白
