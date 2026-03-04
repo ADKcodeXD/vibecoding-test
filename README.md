@@ -1,6 +1,11 @@
 # Scene Prompt Builder
 
-一个基于 **Vite + React** 的分镜提示词编辑器，支持：
+一个基于 **Vite + React** 的分镜提示词编辑器，当前包含两个页面模块：
+
+- **首页（原有功能）**：Scene Prompt Builder
+- **Storyboard Editor（新增）**：独立分镜编辑模块
+
+支持能力：
 
 - 多 Project 管理
 - 每个 Project 下多 Scene 管理
