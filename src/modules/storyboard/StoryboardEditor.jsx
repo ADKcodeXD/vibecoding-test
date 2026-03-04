@@ -13,15 +13,44 @@ import {
   saveStoryboardData,
 } from './storyboardStore'
 
+const PANEL_STATE_STORAGE_KEY = 'storyboard-panel-state-v1'
+const defaultPanelState = {
+  isProjectPanelOpen: true,
+  isScenePanelOpen: true,
+  isPreviewOpen: true,
+}
+
+const loadPanelState = () => {
+  try {
+    const raw = localStorage.getItem(PANEL_STATE_STORAGE_KEY)
+    if (!raw) return defaultPanelState
+    const parsed = JSON.parse(raw)
+
+    return {
+      isProjectPanelOpen:
+        typeof parsed?.isProjectPanelOpen === 'boolean' ? parsed.isProjectPanelOpen : defaultPanelState.isProjectPanelOpen,
+      isScenePanelOpen:
+        typeof parsed?.isScenePanelOpen === 'boolean' ? parsed.isScenePanelOpen : defaultPanelState.isScenePanelOpen,
+      isPreviewOpen: typeof parsed?.isPreviewOpen === 'boolean' ? parsed.isPreviewOpen : defaultPanelState.isPreviewOpen,
+    }
+  } catch {
+    return defaultPanelState
+  }
+}
+
 export default function StoryboardEditor() {
   const [data, setData] = useState(loadStoryboardData)
   const [copyLabel, setCopyLabel] = useState('复制 Prompt')
-  const [isProjectPanelOpen, setIsProjectPanelOpen] = useState(true)
-  const [isPreviewOpen, setIsPreviewOpen] = useState(true)
+  const [panelState, setPanelState] = useState(loadPanelState)
+  const { isProjectPanelOpen, isScenePanelOpen, isPreviewOpen } = panelState
 
   useEffect(() => {
     saveStoryboardData(data)
   }, [data])
+
+  useEffect(() => {
+    localStorage.setItem(PANEL_STATE_STORAGE_KEY, JSON.stringify(panelState))
+  }, [panelState])
 
   const normalizedData = useMemo(() => normalizeStoryboardData(data), [data])
 
@@ -128,7 +157,7 @@ export default function StoryboardEditor() {
         <section className="panel sidebar-panel">
           <button
             className="panel-toggle"
-            onClick={() => setIsProjectPanelOpen((prev) => !prev)}
+            onClick={() => setPanelState((prev) => ({ ...prev, isProjectPanelOpen: !prev.isProjectPanelOpen }))}
             aria-expanded={isProjectPanelOpen}
           >
             <span>新建项目</span>
@@ -191,47 +220,71 @@ export default function StoryboardEditor() {
           <div className="editor-layout">
             <div className="editor-primary">
               <section className="panel">
-                <h3>Project 设置</h3>
-                <label>
-                  Project 名称
-                  <input
-                    value={currentProject.name}
-                    onChange={(event) =>
-                      updateCurrentProject((project) => ({ ...project, name: event.target.value }))
-                    }
-                  />
-                </label>
-                <label>
-                  Project 固定提示词
-                  <textarea
-                    rows={3}
-                    value={currentProject.fixedPrompt}
-                    onChange={(event) =>
-                      updateCurrentProject((project) => ({ ...project, fixedPrompt: event.target.value }))
-                    }
-                  />
-                </label>
+                <button
+                  className="panel-toggle"
+                  onClick={() => setPanelState((prev) => ({ ...prev, isProjectPanelOpen: !prev.isProjectPanelOpen }))}
+                  aria-expanded={isProjectPanelOpen}
+                >
+                  <span>Project 设置</span>
+                  <span>{isProjectPanelOpen ? '−' : '+'}</span>
+                </button>
+
+                {isProjectPanelOpen && (
+                  <>
+                    <label>
+                      Project 名称
+                      <input
+                        value={currentProject.name}
+                        onChange={(event) =>
+                          updateCurrentProject((project) => ({ ...project, name: event.target.value }))
+                        }
+                      />
+                    </label>
+                    <label>
+                      Project 固定提示词
+                      <textarea
+                        rows={3}
+                        value={currentProject.fixedPrompt}
+                        onChange={(event) =>
+                          updateCurrentProject((project) => ({ ...project, fixedPrompt: event.target.value }))
+                        }
+                      />
+                    </label>
+                  </>
+                )}
               </section>
 
               <section className="panel">
-                <h3>Scene 设置</h3>
-                <label>
-                  Scene 名称
-                  <input
-                    value={currentScene.name}
-                    onChange={(event) => updateCurrentScene((scene) => ({ ...scene, name: event.target.value }))}
-                  />
-                </label>
-                <label>
-                  Scene 固定提示词
-                  <textarea
-                    rows={3}
-                    value={currentScene.fixedPrompt}
-                    onChange={(event) =>
-                      updateCurrentScene((scene) => ({ ...scene, fixedPrompt: event.target.value }))
-                    }
-                  />
-                </label>
+                <button
+                  className="panel-toggle"
+                  onClick={() => setPanelState((prev) => ({ ...prev, isScenePanelOpen: !prev.isScenePanelOpen }))}
+                  aria-expanded={isScenePanelOpen}
+                >
+                  <span>Scene 设置</span>
+                  <span>{isScenePanelOpen ? '−' : '+'}</span>
+                </button>
+
+                {isScenePanelOpen && (
+                  <>
+                    <label>
+                      Scene 名称
+                      <input
+                        value={currentScene.name}
+                        onChange={(event) => updateCurrentScene((scene) => ({ ...scene, name: event.target.value }))}
+                      />
+                    </label>
+                    <label>
+                      Scene 固定提示词
+                      <textarea
+                        rows={3}
+                        value={currentScene.fixedPrompt}
+                        onChange={(event) =>
+                          updateCurrentScene((scene) => ({ ...scene, fixedPrompt: event.target.value }))
+                        }
+                      />
+                    </label>
+                  </>
+                )}
               </section>
 
               <section className="panel">
@@ -373,7 +426,7 @@ export default function StoryboardEditor() {
               <section className="panel preview-panel">
                 <button
                   className="panel-toggle"
-                  onClick={() => setIsPreviewOpen((prev) => !prev)}
+                  onClick={() => setPanelState((prev) => ({ ...prev, isPreviewOpen: !prev.isPreviewOpen }))}
                   aria-expanded={isPreviewOpen}
                 >
                   <span>Prompt 预览</span>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import ScenePromptBuilder from './modules/home/ScenePromptBuilder'
+import HomeOverview from './modules/home/HomeOverview'
 import StoryboardEditor from './modules/storyboard/StoryboardEditor'
 import './App.css'
 
@@ -27,7 +27,7 @@ export default function App() {
     if (path === STORYBOARD_PATH) {
       return <StoryboardEditor />
     }
-    return <ScenePromptBuilder />
+    return <HomeOverview onNavigateStoryboard={() => navigate(STORYBOARD_PATH)} />
   }, [path])
 
   return (

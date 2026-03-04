@@ -156,6 +156,83 @@ button.tiny {
   padding: 18px;
 }
 
+.home-page {
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.home-hero {
+  background: linear-gradient(135deg, #0f1f42, #294d99);
+  color: #fff;
+  border-radius: 18px;
+  padding: 26px;
+  box-shadow: 0 12px 30px rgb(15 31 66 / 22%);
+}
+
+.home-kicker {
+  margin: 0;
+  letter-spacing: 0.08em;
+  opacity: 0.86;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.home-hero h1 {
+  margin: 8px 0;
+}
+
+.hero-cta {
+  margin-top: 10px;
+  background: #fff;
+  color: #153167;
+  border-color: #fff;
+  font-weight: 600;
+}
+
+.home-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 14px;
+}
+
+.home-card {
+  background: #fff;
+  border: 1px solid #d9e0ea;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 1px 2px rgb(16 24 40 / 4%);
+}
+
+.home-card h2 {
+  margin: 0 0 8px;
+}
+
+.stats-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.stats-list div {
+  background: #f4f7ff;
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stats-list strong {
+  font-size: 24px;
+}
+
+.muted {
+  color: #617086;
+}
+
 .editor-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 380px;
@@ -258,6 +335,10 @@ textarea:focus {
 
   .export-box {
     min-height: 320px;
+  }
+
+  .home-grid {
+    grid-template-columns: 1fr;
   }
 }
 
