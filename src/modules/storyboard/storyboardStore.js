@@ -5,16 +5,27 @@ const createId = () => `${Date.now()}-${Math.random().toString(16).slice(2)}`
 export const VIEW_ANGLES = ['平视', '俯视', '仰视', '侧视', '背视']
 export const SHOT_SIZES = ['特写', '近景', '半身', '中景', '全景', '大全景']
 export const COMPOSITIONS = ['左三分之一', '居中对称', '对角线构图', '前景遮挡', '过肩']
+export const CAMERA_MOVEMENTS = ['固定机位', '推镜', '拉镜', '摇镜', '移镜', '跟拍']
 
-export const createDefaultCut = () => ({
-  id: createId(),
-  shotSize: '中景',
-  composition: '居中对称',
-  perspective: '平视',
-  character: '',
-  action: '',
-  dialogue: '',
+const normalizeCutFields = (cut = {}) => ({
+  ...cut,
+  shotSize: cut.shotSize ?? '中景',
+  customShotSize: cut.customShotSize ?? '',
+  composition: cut.composition ?? '居中对称',
+  customComposition: cut.customComposition ?? '',
+  perspective: cut.perspective ?? '平视',
+  customPerspective: cut.customPerspective ?? '',
+  cameraMovement: cut.cameraMovement ?? '固定机位',
+  customCameraMovement: cut.customCameraMovement ?? '',
+  character: cut.character ?? '',
+  action: cut.action ?? '',
+  dialogue: cut.dialogue ?? '',
 })
+
+export const createDefaultCut = () =>
+  normalizeCutFields({
+    id: createId(),
+  })
 
 export const createDefaultScene = (name = 'Scene 1') => ({
   id: createId(),
@@ -55,18 +66,26 @@ export const saveStoryboardData = (data) => {
 }
 
 export const normalizeStoryboardData = (data) => {
-  if (!data.projects.length) {
-    return { ...data, selectedProjectId: null, selectedSceneId: null }
+  const projects = (data.projects || []).map((project) => ({
+    ...project,
+    scenes: (project.scenes || []).map((scene) => ({
+      ...scene,
+      cuts: (scene.cuts || []).map((cut) => normalizeCutFields(cut)),
+    })),
+  }))
+
+  if (!projects.length) {
+    return { ...data, projects, selectedProjectId: null, selectedSceneId: null }
   }
 
   let selectedProjectId = data.selectedProjectId
-  if (!selectedProjectId || !data.projects.some((project) => project.id === selectedProjectId)) {
-    selectedProjectId = data.projects[0].id
+  if (!selectedProjectId || !projects.some((project) => project.id === selectedProjectId)) {
+    selectedProjectId = projects[0].id
   }
 
-  const project = data.projects.find((item) => item.id === selectedProjectId)
+  const project = projects.find((item) => item.id === selectedProjectId)
   if (!project?.scenes?.length) {
-    return { ...data, selectedProjectId, selectedSceneId: null }
+    return { ...data, projects, selectedProjectId, selectedSceneId: null }
   }
 
   let selectedSceneId = data.selectedSceneId
@@ -74,5 +93,5 @@ export const normalizeStoryboardData = (data) => {
     selectedSceneId = project.scenes[0].id
   }
 
-  return { ...data, selectedProjectId, selectedSceneId }
+  return { ...data, projects, selectedProjectId, selectedSceneId }
 }

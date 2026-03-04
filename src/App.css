@@ -74,6 +74,12 @@ body {
   margin: 0;
 }
 
+.cut-meta {
+  margin-top: 3px;
+  font-size: 12px;
+  color: #617086;
+}
+
 button {
   border: 1px solid #c7d1de;
   background: #fff;
@@ -187,6 +193,12 @@ label {
   font-size: 14px;
 }
 
+.mixed-input {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 input,
 select,
 textarea {
@@ -269,5 +281,9 @@ textarea:focus {
 
   .cut-grid {
     grid-template-columns: repeat(2, minmax(120px, 1fr));
+  }
+
+  .mixed-input {
+    grid-template-columns: 1fr;
   }
 }

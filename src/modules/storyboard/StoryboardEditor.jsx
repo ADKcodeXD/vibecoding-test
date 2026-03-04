@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { formatScenePrompt } from './promptFormatter'
 import {
+  CAMERA_MOVEMENTS,
   COMPOSITIONS,
   SHOT_SIZES,
   VIEW_ANGLES,
@@ -100,6 +101,12 @@ export default function StoryboardEditor() {
       ...scene,
       cuts: scene.cuts.map((cut) => (cut.id === cutId ? { ...cut, ...patch } : cut)),
     }))
+  }
+
+  const resolveCutValue = (customValue, presetValue) => {
+    const trimmedCustom = (customValue || '').trim()
+    if (trimmedCustom) return trimmedCustom
+    return presetValue || ''
   }
 
   const scenePrompt = useMemo(() => formatScenePrompt(currentProject, currentScene), [currentProject, currentScene])
@@ -236,7 +243,12 @@ export default function StoryboardEditor() {
                 {currentScene.cuts.map((cut, index) => (
                   <div key={cut.id} className="cut-card">
                     <div className="cut-title-row">
-                      <h4>Cut {index + 1}</h4>
+                      <div>
+                        <h4>Cut {index + 1}</h4>
+                        <div className="cut-meta">
+                          {resolveCutValue(cut.customShotSize, cut.shotSize)} · {resolveCutValue(cut.customComposition, cut.composition)} · {resolveCutValue(cut.customPerspective, cut.perspective)} · {resolveCutValue(cut.customCameraMovement, cut.cameraMovement)}
+                        </div>
+                      </div>
                       <button className="tiny danger" onClick={() => deleteCut(cut.id)}>
                         删除
                       </button>
@@ -245,41 +257,86 @@ export default function StoryboardEditor() {
                     <div className="cut-grid">
                       <label>
                         景别
-                        <select value={cut.shotSize} onChange={(event) => updateCut(cut.id, { shotSize: event.target.value })}>
-                          {SHOT_SIZES.map((value) => (
-                            <option key={value} value={value}>
-                              {value}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="mixed-input">
+                          <select
+                            value={cut.shotSize}
+                            onChange={(event) => updateCut(cut.id, { shotSize: event.target.value })}
+                          >
+                            {SHOT_SIZES.map((value) => (
+                              <option key={value} value={value}>
+                                {value}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            placeholder="自定义"
+                            value={cut.customShotSize || ''}
+                            onChange={(event) => updateCut(cut.id, { customShotSize: event.target.value })}
+                          />
+                        </div>
                       </label>
 
                       <label>
                         构图
-                        <select
-                          value={cut.composition}
-                          onChange={(event) => updateCut(cut.id, { composition: event.target.value })}
-                        >
-                          {COMPOSITIONS.map((value) => (
-                            <option key={value} value={value}>
-                              {value}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="mixed-input">
+                          <select
+                            value={cut.composition}
+                            onChange={(event) => updateCut(cut.id, { composition: event.target.value })}
+                          >
+                            {COMPOSITIONS.map((value) => (
+                              <option key={value} value={value}>
+                                {value}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            placeholder="自定义"
+                            value={cut.customComposition || ''}
+                            onChange={(event) => updateCut(cut.id, { customComposition: event.target.value })}
+                          />
+                        </div>
                       </label>
 
                       <label>
                         视角
-                        <select
-                          value={cut.perspective}
-                          onChange={(event) => updateCut(cut.id, { perspective: event.target.value })}
-                        >
-                          {VIEW_ANGLES.map((value) => (
-                            <option key={value} value={value}>
-                              {value}
-                            </option>
-                          ))}
-                        </select>
+                        <div className="mixed-input">
+                          <select
+                            value={cut.perspective}
+                            onChange={(event) => updateCut(cut.id, { perspective: event.target.value })}
+                          >
+                            {VIEW_ANGLES.map((value) => (
+                              <option key={value} value={value}>
+                                {value}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            placeholder="自定义"
+                            value={cut.customPerspective || ''}
+                            onChange={(event) => updateCut(cut.id, { customPerspective: event.target.value })}
+                          />
+                        </div>
+                      </label>
+
+                      <label>
+                        镜头运镜
+                        <div className="mixed-input">
+                          <select
+                            value={cut.cameraMovement || '固定机位'}
+                            onChange={(event) => updateCut(cut.id, { cameraMovement: event.target.value })}
+                          >
+                            {CAMERA_MOVEMENTS.map((value) => (
+                              <option key={value} value={value}>
+                                {value}
+                              </option>
+                            ))}
+                          </select>
+                          <input
+                            placeholder="自定义"
+                            value={cut.customCameraMovement || ''}
+                            onChange={(event) => updateCut(cut.id, { customCameraMovement: event.target.value })}
+                          />
+                        </div>
                       </label>
 
                       <label>
