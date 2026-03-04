@@ -276,6 +276,10 @@ label {
   gap: 8px;
 }
 
+.composition-field {
+  grid-template-columns: 1fr auto;
+}
+
 input,
 select,
 textarea {
@@ -316,6 +320,125 @@ textarea:focus {
 
 .preview-panel {
   gap: 12px;
+}
+
+.custom-fields-wrap {
+  border: 1px dashed #d9e0ea;
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kv-row {
+  display: grid;
+  grid-template-columns: minmax(120px, 0.9fr) minmax(160px, 1fr) auto;
+  gap: 8px;
+}
+
+.images-panel {
+  border: 1px solid #d9e0ea;
+  border-radius: 10px;
+  padding: 10px;
+  background: #fff;
+}
+
+.inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tiny-text {
+  font-size: 12px;
+}
+
+.hidden-file-input {
+  display: none;
+}
+
+.image-grid {
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+}
+
+.image-item {
+  border: 1px solid #d9e0ea;
+  border-radius: 8px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: #f9fbfd;
+}
+
+.image-item img,
+.generated-preview img {
+  width: 100%;
+  border-radius: 6px;
+  object-fit: cover;
+}
+
+.generate-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.generate-options {
+  display: flex;
+  gap: 8px;
+}
+
+.generated-preview {
+  border: 1px solid #d9e0ea;
+  border-radius: 10px;
+  padding: 8px;
+  background: #fff;
+}
+
+.status-banner {
+  border: 1px solid #dbe4f2;
+  background: #f6f9ff;
+  color: #234077;
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 13px;
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgb(28 36 48 / 42%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 20;
+}
+
+.modal-card {
+  width: min(480px, calc(100vw - 24px));
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #d9e0ea;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.modal-card h3 {
+  margin: 0;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
 }
 
 .export-box {
@@ -366,5 +489,17 @@ textarea:focus {
 
   .mixed-input {
     grid-template-columns: 1fr;
+  }
+
+  .kv-row,
+  .generate-row {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+
+  .generate-options {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 }

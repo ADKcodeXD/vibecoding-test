@@ -7,6 +7,19 @@ export const SHOT_SIZES = ['特写', '近景', '半身', '中景', '全景', '�
 export const COMPOSITIONS = ['左三分之一', '居中对称', '对角线构图', '前景遮挡', '过肩']
 export const CAMERA_MOVEMENTS = ['固定机位', '推镜', '拉镜', '摇镜', '移镜', '跟拍']
 
+const normalizeProjectCustomField = (field = {}) => ({
+  id: field.id ?? createId(),
+  key: field.key ?? '',
+  value: field.value ?? '',
+})
+
+const normalizeCutImage = (image = {}) => ({
+  id: image.id ?? createId(),
+  name: image.name ?? 'image.png',
+  dataUrl: image.dataUrl ?? '',
+  createdAt: image.createdAt ?? Date.now(),
+})
+
 const normalizeCutFields = (cut = {}) => ({
   ...cut,
   shotSize: cut.shotSize ?? '中景',
@@ -20,6 +33,9 @@ const normalizeCutFields = (cut = {}) => ({
   character: cut.character ?? '',
   action: cut.action ?? '',
   dialogue: cut.dialogue ?? '',
+  detailedDescription: cut.detailedDescription ?? '',
+  images: (cut.images || []).map((image) => normalizeCutImage(image)).filter((image) => image.dataUrl),
+  latestGeneratedImage: cut.latestGeneratedImage ?? '',
 })
 
 export const createDefaultCut = () =>
@@ -38,6 +54,7 @@ export const createDefaultProject = (name = 'Storyboard Project 1') => ({
   id: createId(),
   name,
   fixedPrompt: '电影感叙事，统一色调，真实材质细节，连贯时空。',
+  customFields: [],
   scenes: [createDefaultScene('Scene 1')],
 })
 
@@ -45,6 +62,9 @@ export const initialStoryboardData = {
   projects: [createDefaultProject()],
   selectedProjectId: null,
   selectedSceneId: null,
+  settings: {
+    geminiApiKey: '',
+  },
 }
 
 export const loadStoryboardData = () => {
@@ -55,6 +75,10 @@ export const loadStoryboardData = () => {
     return {
       ...initialStoryboardData,
       ...parsed,
+      settings: {
+        ...initialStoryboardData.settings,
+        ...(parsed.settings || {}),
+      },
     }
   } catch {
     return initialStoryboardData
@@ -68,14 +92,20 @@ export const saveStoryboardData = (data) => {
 export const normalizeStoryboardData = (data) => {
   const projects = (data.projects || []).map((project) => ({
     ...project,
+    customFields: (project.customFields || []).map((field) => normalizeProjectCustomField(field)),
     scenes: (project.scenes || []).map((scene) => ({
       ...scene,
       cuts: (scene.cuts || []).map((cut) => normalizeCutFields(cut)),
     })),
   }))
 
+  const settings = {
+    ...initialStoryboardData.settings,
+    ...(data.settings || {}),
+  }
+
   if (!projects.length) {
-    return { ...data, projects, selectedProjectId: null, selectedSceneId: null }
+    return { ...data, projects, selectedProjectId: null, selectedSceneId: null, settings }
   }
 
   let selectedProjectId = data.selectedProjectId
@@ -85,7 +115,7 @@ export const normalizeStoryboardData = (data) => {
 
   const project = projects.find((item) => item.id === selectedProjectId)
   if (!project?.scenes?.length) {
-    return { ...data, projects, selectedProjectId, selectedSceneId: null }
+    return { ...data, projects, selectedProjectId, selectedSceneId: null, settings }
   }
 
   let selectedSceneId = data.selectedSceneId
@@ -93,5 +123,7 @@ export const normalizeStoryboardData = (data) => {
     selectedSceneId = project.scenes[0].id
   }
 
-  return { ...data, projects, selectedProjectId, selectedSceneId }
+  return { ...data, projects, selectedProjectId, selectedSceneId, settings }
 }
+
+export const createLocalId = createId
