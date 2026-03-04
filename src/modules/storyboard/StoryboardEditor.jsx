@@ -15,6 +15,8 @@ import {
 export default function StoryboardEditor() {
   const [data, setData] = useState(loadStoryboardData)
   const [copyLabel, setCopyLabel] = useState('复制 Prompt')
+  const [isProjectPanelOpen, setIsProjectPanelOpen] = useState(true)
+  const [isPreviewOpen, setIsPreviewOpen] = useState(true)
 
   useEffect(() => {
     saveStoryboardData(data)
@@ -116,193 +118,223 @@ export default function StoryboardEditor() {
   return (
     <div className="app-shell">
       <aside className="sidebar">
-        <div className="sidebar-header">
-          <h2>Storyboard Projects</h2>
-          <button onClick={addProject}>+ 新建</button>
-        </div>
+        <section className="panel sidebar-panel">
+          <button
+            className="panel-toggle"
+            onClick={() => setIsProjectPanelOpen((prev) => !prev)}
+            aria-expanded={isProjectPanelOpen}
+          >
+            <span>新建项目</span>
+            <span>{isProjectPanelOpen ? '−' : '+'}</span>
+          </button>
 
-        <div className="project-list">
-          {normalizedData.projects.map((project) => (
-            <div key={project.id} className="project-block">
-              <button
-                className={`project-item ${project.id === currentProject?.id ? 'active' : ''}`}
-                onClick={() =>
-                  setData((prev) => ({
-                    ...prev,
-                    selectedProjectId: project.id,
-                    selectedSceneId: project.scenes[0]?.id || null,
-                  }))
-                }
-              >
-                {project.name}
-              </button>
+          {isProjectPanelOpen && (
+            <>
+              <div className="sidebar-header">
+                <h2>Storyboard Projects</h2>
+                <button onClick={addProject}>+ 新建</button>
+              </div>
 
-              {project.id === currentProject?.id && (
-                <div className="scene-list">
-                  {project.scenes.map((scene) => (
-                    <div key={scene.id} className="scene-row">
-                      <button
-                        className={`scene-item ${scene.id === currentScene?.id ? 'active' : ''}`}
-                        onClick={() => setData((prev) => ({ ...prev, selectedSceneId: scene.id }))}
-                      >
-                        {scene.name}
-                      </button>
-                      <button className="tiny danger" onClick={() => deleteScene(scene.id)}>
-                        删
-                      </button>
-                    </div>
-                  ))}
-                  <button className="scene-add" onClick={addScene}>
-                    + 新建 Scene
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
+              <div className="project-list">
+                {normalizedData.projects.map((project) => (
+                  <div key={project.id} className="project-block">
+                    <button
+                      className={`project-item ${project.id === currentProject?.id ? 'active' : ''}`}
+                      onClick={() =>
+                        setData((prev) => ({
+                          ...prev,
+                          selectedProjectId: project.id,
+                          selectedSceneId: project.scenes[0]?.id || null,
+                        }))
+                      }
+                    >
+                      {project.name}
+                    </button>
+
+                    {project.id === currentProject?.id && (
+                      <div className="scene-list">
+                        {project.scenes.map((scene) => (
+                          <div key={scene.id} className="scene-row">
+                            <button
+                              className={`scene-item ${scene.id === currentScene?.id ? 'active' : ''}`}
+                              onClick={() => setData((prev) => ({ ...prev, selectedSceneId: scene.id }))}
+                            >
+                              {scene.name}
+                            </button>
+                            <button className="tiny danger" onClick={() => deleteScene(scene.id)}>
+                              删
+                            </button>
+                          </div>
+                        ))}
+                        <button className="scene-add" onClick={addScene}>
+                          + 新建 Scene
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+        </section>
       </aside>
 
       <main className="main-content">
         {currentProject && currentScene ? (
-          <>
-            <section className="panel">
-              <h3>Project 设置</h3>
-              <label>
-                Project 名称
-                <input
-                  value={currentProject.name}
-                  onChange={(event) =>
-                    updateCurrentProject((project) => ({ ...project, name: event.target.value }))
-                  }
-                />
-              </label>
-              <label>
-                Project 固定提示词
-                <textarea
-                  rows={3}
-                  value={currentProject.fixedPrompt}
-                  onChange={(event) =>
-                    updateCurrentProject((project) => ({ ...project, fixedPrompt: event.target.value }))
-                  }
-                />
-              </label>
-            </section>
+          <div className="editor-layout">
+            <div className="editor-primary">
+              <section className="panel">
+                <h3>Project 设置</h3>
+                <label>
+                  Project 名称
+                  <input
+                    value={currentProject.name}
+                    onChange={(event) =>
+                      updateCurrentProject((project) => ({ ...project, name: event.target.value }))
+                    }
+                  />
+                </label>
+                <label>
+                  Project 固定提示词
+                  <textarea
+                    rows={3}
+                    value={currentProject.fixedPrompt}
+                    onChange={(event) =>
+                      updateCurrentProject((project) => ({ ...project, fixedPrompt: event.target.value }))
+                    }
+                  />
+                </label>
+              </section>
 
-            <section className="panel">
-              <h3>Scene 设置</h3>
-              <label>
-                Scene 名称
-                <input
-                  value={currentScene.name}
-                  onChange={(event) =>
-                    updateCurrentScene((scene) => ({ ...scene, name: event.target.value }))
-                  }
-                />
-              </label>
-              <label>
-                Scene 固定提示词
-                <textarea
-                  rows={3}
-                  value={currentScene.fixedPrompt}
-                  onChange={(event) =>
-                    updateCurrentScene((scene) => ({ ...scene, fixedPrompt: event.target.value }))
-                  }
-                />
-              </label>
-            </section>
+              <section className="panel">
+                <h3>Scene 设置</h3>
+                <label>
+                  Scene 名称
+                  <input
+                    value={currentScene.name}
+                    onChange={(event) => updateCurrentScene((scene) => ({ ...scene, name: event.target.value }))}
+                  />
+                </label>
+                <label>
+                  Scene 固定提示词
+                  <textarea
+                    rows={3}
+                    value={currentScene.fixedPrompt}
+                    onChange={(event) =>
+                      updateCurrentScene((scene) => ({ ...scene, fixedPrompt: event.target.value }))
+                    }
+                  />
+                </label>
+              </section>
 
-            <section className="panel">
-              <div className="panel-head">
-                <h3>Cut 列表</h3>
-                <button onClick={addCut}>+ 添加 Cut</button>
-              </div>
-
-              {currentScene.cuts.map((cut, index) => (
-                <div key={cut.id} className="cut-card">
-                  <div className="cut-title-row">
-                    <h4>Cut {index + 1}</h4>
-                    <button className="tiny danger" onClick={() => deleteCut(cut.id)}>
-                      删除
-                    </button>
-                  </div>
-
-                  <div className="cut-grid">
-                    <label>
-                      景别
-                      <select value={cut.shotSize} onChange={(event) => updateCut(cut.id, { shotSize: event.target.value })}>
-                        {SHOT_SIZES.map((value) => (
-                          <option key={value} value={value}>
-                            {value}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label>
-                      构图
-                      <select
-                        value={cut.composition}
-                        onChange={(event) => updateCut(cut.id, { composition: event.target.value })}
-                      >
-                        {COMPOSITIONS.map((value) => (
-                          <option key={value} value={value}>
-                            {value}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label>
-                      视角
-                      <select
-                        value={cut.perspective}
-                        onChange={(event) => updateCut(cut.id, { perspective: event.target.value })}
-                      >
-                        {VIEW_ANGLES.map((value) => (
-                          <option key={value} value={value}>
-                            {value}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
-
-                    <label>
-                      人物
-                      <input
-                        value={cut.character}
-                        onChange={(event) => updateCut(cut.id, { character: event.target.value })}
-                      />
-                    </label>
-
-                    <label>
-                      人物动作
-                      <input
-                        value={cut.action}
-                        onChange={(event) => updateCut(cut.id, { action: event.target.value })}
-                      />
-                    </label>
-
-                    <label className="full-row">
-                      对白
-                      <textarea
-                        rows={2}
-                        value={cut.dialogue}
-                        onChange={(event) => updateCut(cut.id, { dialogue: event.target.value })}
-                      />
-                    </label>
-                  </div>
+              <section className="panel">
+                <div className="panel-head">
+                  <h3>Cut 列表</h3>
+                  <button onClick={addCut}>+ 添加 Cut</button>
                 </div>
-              ))}
-            </section>
 
-            <section className="panel">
-              <div className="panel-head">
-                <h3>导出当前 Scene 完整 Prompt</h3>
-                <button onClick={copyPrompt}>{copyLabel}</button>
-              </div>
-              <textarea className="export-box" rows={14} readOnly value={scenePrompt} />
-            </section>
-          </>
+                {currentScene.cuts.map((cut, index) => (
+                  <div key={cut.id} className="cut-card">
+                    <div className="cut-title-row">
+                      <h4>Cut {index + 1}</h4>
+                      <button className="tiny danger" onClick={() => deleteCut(cut.id)}>
+                        删除
+                      </button>
+                    </div>
+
+                    <div className="cut-grid">
+                      <label>
+                        景别
+                        <select value={cut.shotSize} onChange={(event) => updateCut(cut.id, { shotSize: event.target.value })}>
+                          {SHOT_SIZES.map((value) => (
+                            <option key={value} value={value}>
+                              {value}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        构图
+                        <select
+                          value={cut.composition}
+                          onChange={(event) => updateCut(cut.id, { composition: event.target.value })}
+                        >
+                          {COMPOSITIONS.map((value) => (
+                            <option key={value} value={value}>
+                              {value}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        视角
+                        <select
+                          value={cut.perspective}
+                          onChange={(event) => updateCut(cut.id, { perspective: event.target.value })}
+                        >
+                          {VIEW_ANGLES.map((value) => (
+                            <option key={value} value={value}>
+                              {value}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <label>
+                        人物
+                        <input
+                          value={cut.character}
+                          onChange={(event) => updateCut(cut.id, { character: event.target.value })}
+                        />
+                      </label>
+
+                      <label>
+                        人物动作
+                        <input
+                          value={cut.action}
+                          onChange={(event) => updateCut(cut.id, { action: event.target.value })}
+                        />
+                      </label>
+
+                      <label className="full-row">
+                        对白
+                        <textarea
+                          rows={2}
+                          value={cut.dialogue}
+                          onChange={(event) => updateCut(cut.id, { dialogue: event.target.value })}
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </section>
+            </div>
+
+            <aside className="preview-column">
+              <section className="panel preview-panel">
+                <button
+                  className="panel-toggle"
+                  onClick={() => setIsPreviewOpen((prev) => !prev)}
+                  aria-expanded={isPreviewOpen}
+                >
+                  <span>Prompt 预览</span>
+                  <span>{isPreviewOpen ? '−' : '+'}</span>
+                </button>
+
+                {isPreviewOpen && (
+                  <>
+                    <div className="panel-head">
+                      <h3>导出当前 Scene 完整 Prompt</h3>
+                      <button onClick={copyPrompt}>{copyLabel}</button>
+                    </div>
+                    <textarea className="export-box" rows={20} readOnly value={scenePrompt} />
+                  </>
+                )}
+              </section>
+            </aside>
+          </div>
         ) : (
           <p>暂无项目，请先创建。</p>
         )}
